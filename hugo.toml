@@ -1,6 +1,7 @@
 baseURL = "/"
 languageCode = "fr"
 title = "Bonnes Nouvelles"
+removePathAccents = true
 summaryLength = 40
 
 [pagination]
