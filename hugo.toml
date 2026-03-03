@@ -1,0 +1,51 @@
+baseURL = "/"
+languageCode = "fr"
+title = "Bonnes Nouvelles"
+theme = ""
+paginate = 10
+summaryLength = 40
+
+[params]
+  description = "Chaque jour, une dose d'optimisme : les meilleures nouvelles du monde en IA, technologie, écologie, innovation et idées inspirantes."
+  author = "Bonnes Nouvelles"
+  mainSections = ["posts"]
+
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.highlight]
+    style = "monokai"
+
+[outputs]
+  home = ["HTML", "RSS"]
+
+[menu]
+  [[menu.main]]
+    name = "Accueil"
+    url = "/"
+    weight = 1
+  [[menu.main]]
+    name = "IA"
+    url = "/categories/intelligence-artificielle/"
+    weight = 2
+  [[menu.main]]
+    name = "Technologie"
+    url = "/categories/technologie/"
+    weight = 3
+  [[menu.main]]
+    name = "Écologie"
+    url = "/categories/ecologie/"
+    weight = 4
+  [[menu.main]]
+    name = "Innovation"
+    url = "/categories/innovation/"
+    weight = 5
+  [[menu.main]]
+    name = "Idées"
+    url = "/categories/idees-incroyables/"
+    weight = 6

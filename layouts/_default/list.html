@@ -1,0 +1,32 @@
+{{ define "main" }}
+<section class="page-header">
+  <div class="container">
+    <h1 class="page-title">
+      {{ if .Data.Singular }}
+        {{ if eq .Data.Singular "category" }}
+          {{ $cat := .Title }}
+          {{ if eq $cat "Intelligence Artificielle" }}🤖{{ end }}
+          {{ if eq $cat "Technologie" }}💻{{ end }}
+          {{ if eq $cat "Ecologie" }}🌿{{ end }}
+          {{ if eq $cat "Innovation" }}💡{{ end }}
+          {{ if eq $cat "Idees Incroyables" }}✨{{ end }}
+        {{ end }}
+      {{ end }}
+      {{ .Title }}
+    </h1>
+    {{ with .Description }}<p class="page-description">{{ . }}</p>{{ end }}
+  </div>
+</section>
+
+<section class="articles-section">
+  <div class="container">
+    <div class="articles-grid">
+      {{ range .Paginator.Pages }}
+        {{ partial "article-card.html" . }}
+      {{ end }}
+    </div>
+
+    {{ template "_internal/pagination.html" . }}
+  </div>
+</section>
+{{ end }}

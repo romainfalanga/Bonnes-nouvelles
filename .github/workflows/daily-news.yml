@@ -1,0 +1,56 @@
+name: "📰 Publication quotidienne - Bonnes Nouvelles"
+
+on:
+  schedule:
+    # Tous les jours à 12h00 (heure de Paris = 11h00 UTC)
+    # Du lundi au vendredi uniquement
+    - cron: "0 11 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force_date:
+        description: "Forcer une date spécifique (YYYY-MM-DD)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  generate-article:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Checkout du repository"
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: "🐍 Installation de Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: "📦 Installation des dépendances"
+        run: pip install -r scripts/requirements.txt
+
+      - name: "📰 Génération de l'article du jour"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/generate-article.py
+
+      - name: "📤 Commit et push"
+        run: |
+          git config user.name "Bonnes Nouvelles Bot"
+          git config user.email "bot@bonnes-nouvelles.fr"
+          git add content/posts/
+
+          # Vérifier s'il y a des changements
+          if git diff --staged --quiet; then
+            echo "Aucun nouvel article à publier."
+            exit 0
+          fi
+
+          DATE=$(date +%Y-%m-%d)
+          DAY=$(date +%A)
+          git commit -m "📰 Article du ${DAY} ${DATE}"
+          git push

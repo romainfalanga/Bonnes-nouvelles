@@ -1,0 +1,42 @@
+{{ define "main" }}
+<section class="hero">
+  <div class="container">
+    <h1 class="hero-title">Les <span class="highlight">bonnes nouvelles</span> dont le monde a besoin</h1>
+    <p class="hero-subtitle">Chaque jour, découvrez les avancées positives en intelligence artificielle, technologie, écologie, innovation et les idées les plus inspirantes de la semaine.</p>
+    <div class="hero-schedule">
+      <div class="schedule-item"><span class="day">Lun</span><span class="topic">🤖 IA</span></div>
+      <div class="schedule-item"><span class="day">Mar</span><span class="topic">💻 Tech</span></div>
+      <div class="schedule-item"><span class="day">Mer</span><span class="topic">🌿 Éco</span></div>
+      <div class="schedule-item"><span class="day">Jeu</span><span class="topic">💡 Innov</span></div>
+      <div class="schedule-item"><span class="day">Ven</span><span class="topic">✨ Idées</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="latest-articles">
+  <div class="container">
+    {{ $pages := where .Site.RegularPages "Section" "posts" }}
+    {{ $latest := first 1 $pages }}
+    {{ range $latest }}
+    <div class="featured-article">
+      {{ partial "article-card.html" . }}
+    </div>
+    {{ end }}
+
+    {{ if gt (len $pages) 1 }}
+    <h2 class="section-title">Articles récents</h2>
+    <div class="articles-grid">
+      {{ range after 1 (first 7 $pages) }}
+        {{ partial "article-card.html" . }}
+      {{ end }}
+    </div>
+    {{ end }}
+
+    {{ if gt (len $pages) 7 }}
+    <div class="see-more">
+      <a href="/posts/" class="btn">Voir tous les articles</a>
+    </div>
+    {{ end }}
+  </div>
+</section>
+{{ end }}
