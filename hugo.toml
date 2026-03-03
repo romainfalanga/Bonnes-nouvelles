@@ -1,9 +1,10 @@
 baseURL = "/"
 languageCode = "fr"
 title = "Bonnes Nouvelles"
-theme = ""
-paginate = 10
 summaryLength = 40
+
+[pagination]
+  pagerSize = 10
 
 [params]
   description = "Chaque jour, une dose d'optimisme : les meilleures nouvelles du monde en IA, technologie, écologie, innovation et idées inspirantes."
