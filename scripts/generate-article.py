@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Script de génération automatique d'articles pour Bonnes Nouvelles.
-Utilise l'API Anthropic (Claude) pour rechercher et rédiger des articles
-sur les bonnes nouvelles du monde, avec une couche de vérification des faits.
+Utilise l'API Mammouth (proxy OpenAI-compatible) avec Claude Sonnet
+pour rechercher et rédiger des articles sur les bonnes nouvelles du monde,
+avec une couche de vérification des faits.
 
 Thèmes par jour :
   - Lundi : Intelligence Artificielle
@@ -16,7 +17,10 @@ import os
 import sys
 import json
 import datetime
-import anthropic
+from openai import OpenAI
+
+MAMMOUTH_BASE_URL = "https://api.mammouth.ai/v1"
+MODEL = "claude-sonnet-4-6"
 
 # Configuration des thèmes par jour de la semaine (0=lundi, 4=vendredi)
 THEMES = {
@@ -58,6 +62,24 @@ THEMES = {
 }
 
 
+def get_client():
+    """Crée un client OpenAI pointant vers l'API Mammouth."""
+    return OpenAI(
+        base_url=MAMMOUTH_BASE_URL,
+        api_key=os.environ.get("MAMMOUTH_API_KEY"),
+    )
+
+
+def chat(client, messages, max_tokens):
+    """Appel générique à l'API Mammouth via le format OpenAI."""
+    response = client.chat.completions.create(
+        model=MODEL,
+        max_tokens=max_tokens,
+        messages=messages,
+    )
+    return response.choices[0].message.content
+
+
 def get_today_theme():
     """Retourne le thème du jour basé sur le jour de la semaine."""
     today = datetime.date.today()
@@ -70,11 +92,8 @@ def get_today_theme():
     return today, THEMES[weekday]
 
 
-def generate_article(today, theme):
-    """Génère un article en utilisant Claude avec recherche web."""
-    client = anthropic.Anthropic()
-
-    date_str = today.strftime("%Y-%m-%d")
+def generate_article(client, today, theme):
+    """Génère un article en utilisant Claude Sonnet via Mammouth."""
     date_from = (today - datetime.timedelta(days=7)).strftime("%d/%m/%Y")
     date_to = today.strftime("%d/%m/%Y")
 
@@ -104,26 +123,11 @@ IMPORTANT :
 
 Réponds UNIQUEMENT avec le contenu Markdown de l'article, rien d'autre."""
 
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    return response.content[0].text
+    return chat(client, [{"role": "user", "content": prompt}], max_tokens=4096)
 
 
-def fact_check_and_enrich(theme, article_content):
-    """Couche finale de vérification des faits, ajout de sources et reformulation.
-
-    Cette fonction effectue une passe de vérification sur l'article généré :
-    1. Vérifie la véracité des faits mentionnés
-    2. Ajoute des liens sources aux endroits pertinents dans le texte
-    3. Vérifie que l'aspect "bonne nouvelle" est fondé et cohérent
-    4. Reformule et peaufine le texte pour plus de clarté et de précision
-    """
-    client = anthropic.Anthropic()
-
+def fact_check_and_enrich(client, theme, article_content):
+    """Couche finale de vérification des faits, ajout de sources et reformulation."""
     prompt = f"""Tu es un rédacteur en chef et vérificateur de faits pour le blog "Bonnes Nouvelles", spécialisé en {theme['name']}.
 
 Voici un article qui a été rédigé et qui doit passer ta vérification finale avant publication.
@@ -168,87 +172,50 @@ RÈGLES IMPORTANTES :
 
 Réponds UNIQUEMENT avec l'article final corrigé et enrichi en Markdown, rien d'autre."""
 
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=5000,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    return response.content[0].text
+    return chat(client, [{"role": "user", "content": prompt}], max_tokens=5000)
 
 
-def generate_title(theme, article_content):
+def generate_title(client, theme, article_content):
     """Génère un titre accrocheur pour l'article."""
-    client = anthropic.Anthropic()
-
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=100,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""Génère UN titre court et accrocheur (max 80 caractères) pour cet article de blog sur les bonnes nouvelles en {theme['name']}.
+    prompt = f"""Génère UN titre court et accrocheur (max 80 caractères) pour cet article de blog sur les bonnes nouvelles en {theme['name']}.
 Le titre doit être optimiste et donner envie de lire.
 Ne mets PAS de guillemets autour du titre.
 
 Début de l'article :
 {article_content[:500]}
 
-Réponds UNIQUEMENT avec le titre, rien d'autre.""",
-            }
-        ],
-    )
+Réponds UNIQUEMENT avec le titre, rien d'autre."""
 
-    return response.content[0].text.strip().strip('"').strip("«").strip("»").strip()
+    result = chat(client, [{"role": "user", "content": prompt}], max_tokens=100)
+    return result.strip().strip('"').strip("«").strip("»").strip()
 
 
-def generate_summary(article_content):
+def generate_summary(client, article_content):
     """Génère un résumé court pour la carte de l'article."""
-    client = anthropic.Anthropic()
-
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=200,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""Génère un résumé de 1-2 phrases (max 160 caractères) pour cet article.
+    prompt = f"""Génère un résumé de 1-2 phrases (max 160 caractères) pour cet article.
 Le résumé doit donner envie de lire l'article complet.
 
 Article :
 {article_content[:1000]}
 
-Réponds UNIQUEMENT avec le résumé, rien d'autre.""",
-            }
-        ],
-    )
+Réponds UNIQUEMENT avec le résumé, rien d'autre."""
 
-    return response.content[0].text.strip()
+    return chat(client, [{"role": "user", "content": prompt}], max_tokens=200).strip()
 
 
-def extract_tags(theme, article_content):
+def extract_tags(client, theme, article_content):
     """Extrait des tags pertinents de l'article."""
-    client = anthropic.Anthropic()
-
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=100,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""Génère 3-5 tags pertinents pour cet article sur {theme['name']}.
+    prompt = f"""Génère 3-5 tags pertinents pour cet article sur {theme['name']}.
 Format : une liste de mots séparés par des virgules, en minuscules, sans #.
 Exemple : intelligence artificielle, santé, recherche
 
 Article :
 {article_content[:800]}
 
-Réponds UNIQUEMENT avec les tags séparés par des virgules.""",
-            }
-        ],
-    )
+Réponds UNIQUEMENT avec les tags séparés par des virgules."""
 
-    tags = [tag.strip() for tag in response.content[0].text.strip().split(",")]
+    result = chat(client, [{"role": "user", "content": prompt}], max_tokens=100)
+    tags = [tag.strip() for tag in result.strip().split(",")]
     return tags
 
 
@@ -290,9 +257,12 @@ sources_verified: true
 
 def main():
     # Vérifier la clé API
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("Erreur : ANTHROPIC_API_KEY non définie.")
+    if not os.environ.get("MAMMOUTH_API_KEY"):
+        print("Erreur : MAMMOUTH_API_KEY non définie.")
         sys.exit(1)
+
+    # Créer le client Mammouth
+    client = get_client()
 
     # Obtenir le thème du jour
     today, theme = get_today_theme()
@@ -301,23 +271,23 @@ def main():
 
     # Étape 1 : Générer l'article brut
     print("✍️  Rédaction de l'article en cours...")
-    content = generate_article(today, theme)
+    content = generate_article(client, today, theme)
 
     # Étape 2 : Vérification des faits, ajout de sources et reformulation
     print("🔍 Vérification des faits et ajout des sources...")
-    content = fact_check_and_enrich(theme, content)
+    content = fact_check_and_enrich(client, theme, content)
 
     # Étape 3 : Générer le titre (basé sur la version vérifiée)
     print("📝 Génération du titre...")
-    title = generate_title(theme, content)
+    title = generate_title(client, theme, content)
 
     # Étape 4 : Générer le résumé
     print("📋 Génération du résumé...")
-    summary = generate_summary(content)
+    summary = generate_summary(client, content)
 
     # Étape 5 : Extraire les tags
     print("🏷️  Extraction des tags...")
-    tags = extract_tags(theme, content)
+    tags = extract_tags(client, theme, content)
 
     # Étape 6 : Créer le fichier
     filepath = create_markdown_file(today, theme, title, summary, tags, content)
