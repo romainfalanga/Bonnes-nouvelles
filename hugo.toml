@@ -7,7 +7,7 @@ summaryLength = 40
   pagerSize = 10
 
 [params]
-  description = "Chaque jour, une dose d'optimisme : les meilleures nouvelles du monde en IA, technologie, écologie, innovation et idées inspirantes."
+  description = "Chaque jour, une dose d'optimisme : les meilleures nouvelles du monde en IA, médecine, physique, invention et écologie."
   author = "Bonnes Nouvelles"
   mainSections = ["posts"]
 
@@ -35,18 +35,18 @@ summaryLength = 40
     url = "/categories/intelligence-artificielle/"
     weight = 2
   [[menu.main]]
-    name = "Technologie"
-    url = "/categories/technologie/"
+    name = "Médecine"
+    url = "/categories/medecine-et-sante/"
     weight = 3
+  [[menu.main]]
+    name = "Physique"
+    url = "/categories/physique-et-univers/"
+    weight = 4
+  [[menu.main]]
+    name = "Invention"
+    url = "/categories/invention/"
+    weight = 5
   [[menu.main]]
     name = "Écologie"
     url = "/categories/ecologie/"
-    weight = 4
-  [[menu.main]]
-    name = "Innovation"
-    url = "/categories/innovation/"
-    weight = 5
-  [[menu.main]]
-    name = "Idées"
-    url = "/categories/idees-incroyables/"
     weight = 6

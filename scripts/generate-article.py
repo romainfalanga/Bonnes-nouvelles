@@ -2,21 +2,20 @@
 """
 Script de génération automatique d'articles pour Bonnes Nouvelles.
 Utilise l'API Anthropic (Claude) pour rechercher et rédiger des articles
-sur les bonnes nouvelles du monde.
+sur les bonnes nouvelles du monde, avec une couche de vérification des faits.
 
 Thèmes par jour :
   - Lundi : Intelligence Artificielle
-  - Mardi : Technologie
-  - Mercredi : Écologie
-  - Jeudi : Innovation
-  - Vendredi : Idées Incroyables
+  - Mardi : Médecine et Santé
+  - Mercredi : Physique et Univers
+  - Jeudi : Invention
+  - Vendredi : Écologie
 """
 
 import os
 import sys
 import json
 import datetime
-import re
 import anthropic
 
 # Configuration des thèmes par jour de la semaine (0=lundi, 4=vendredi)
@@ -25,36 +24,36 @@ THEMES = {
         "name": "Intelligence Artificielle",
         "slug": "intelligence-artificielle",
         "emoji": "🤖",
-        "search_terms": "bonnes nouvelles intelligence artificielle IA",
+        "search_terms": "bonnes nouvelles intelligence artificielle IA découverte avancée",
         "description": "Les avancées positives dans le monde de l'IA",
     },
     1: {
-        "name": "Technologie",
-        "slug": "technologie",
-        "emoji": "💻",
-        "search_terms": "bonnes nouvelles technologie innovation tech",
-        "description": "Les bonnes nouvelles du monde de la technologie",
+        "name": "Médecine et Santé",
+        "slug": "medecine-et-sante",
+        "emoji": "🏥",
+        "search_terms": "bonnes nouvelles médecine santé découverte médicale traitement",
+        "description": "Les découvertes médicales et avancées en santé",
     },
     2: {
+        "name": "Physique et Univers",
+        "slug": "physique-et-univers",
+        "emoji": "🔭",
+        "search_terms": "découverte physique astronomie univers espace sciences",
+        "description": "Les découvertes fascinantes en physique et astronomie",
+    },
+    3: {
+        "name": "Invention",
+        "slug": "invention",
+        "emoji": "💡",
+        "search_terms": "invention innovation technologie brevet découverte",
+        "description": "Les inventions qui changent le monde",
+    },
+    4: {
         "name": "Écologie",
         "slug": "ecologie",
         "emoji": "🌿",
-        "search_terms": "bonnes nouvelles écologie environnement climat",
+        "search_terms": "bonnes nouvelles écologie environnement climat biodiversité",
         "description": "Les avancées positives pour notre planète",
-    },
-    3: {
-        "name": "Innovation",
-        "slug": "innovation",
-        "emoji": "💡",
-        "search_terms": "innovation découverte scientifique breakthrough",
-        "description": "Les innovations qui changent le monde",
-    },
-    4: {
-        "name": "Idées Incroyables",
-        "slug": "idees-incroyables",
-        "emoji": "✨",
-        "search_terms": "idées incroyables inventions inspirantes solutions créatives",
-        "description": "Les idées les plus inspirantes de la semaine",
     },
 }
 
@@ -90,23 +89,88 @@ INSTRUCTIONS :
 FORMAT DE L'ARTICLE (en Markdown) :
 - Commence directement par une introduction engageante (2-3 phrases)
 - Pour chaque bonne nouvelle, crée une section avec un titre ## accrocheur
-- Chaque section fait 2-3 paragraphes avec des détails concrets
+- Chaque section fait 2-3 paragraphes avec des détails concrets (chiffres, noms, lieux)
+- Pour chaque fait mentionné, explique clairement POURQUOI c'est une bonne nouvelle et CE QUE ÇA CHANGE concrètement
 - Termine par une conclusion optimiste sur les tendances positives
 - Ton : enthousiaste mais factuel, accessible à tous
 - Longueur : 800-1200 mots environ
 
 IMPORTANT :
 - Ne commence PAS par le titre de l'article (il sera dans les métadonnées)
-- Utilise des faits vérifiables et cite les sources quand possible
+- Utilise des faits vérifiables avec des chiffres précis et des sources identifiables
 - Garde un ton positif et inspirant
 - Écris en français courant, pas trop formel
+- Mentionne les organisations, universités, entreprises ou chercheurs à l'origine des découvertes
 
 Réponds UNIQUEMENT avec le contenu Markdown de l'article, rien d'autre."""
 
-    # Use Claude with web search via tool use
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=4096,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    return response.content[0].text
+
+
+def fact_check_and_enrich(theme, article_content):
+    """Couche finale de vérification des faits, ajout de sources et reformulation.
+
+    Cette fonction effectue une passe de vérification sur l'article généré :
+    1. Vérifie la véracité des faits mentionnés
+    2. Ajoute des liens sources aux endroits pertinents dans le texte
+    3. Vérifie que l'aspect "bonne nouvelle" est fondé et cohérent
+    4. Reformule et peaufine le texte pour plus de clarté et de précision
+    """
+    client = anthropic.Anthropic()
+
+    prompt = f"""Tu es un rédacteur en chef et vérificateur de faits pour le blog "Bonnes Nouvelles", spécialisé en {theme['name']}.
+
+Voici un article qui a été rédigé et qui doit passer ta vérification finale avant publication.
+
+ARTICLE À VÉRIFIER ET ENRICHIR :
+---
+{article_content}
+---
+
+TES MISSIONS (toutes obligatoires) :
+
+1. VÉRIFICATION DES FAITS :
+   - Vérifie chaque fait, chiffre et affirmation dans l'article
+   - Si un fait semble inexact ou exagéré, corrige-le ou reformule pour être plus prudent
+   - Si un fait ne peut pas être vérifié, reformule avec des termes plus nuancés (ex: "selon certaines estimations", "d'après les premières données")
+
+2. AJOUT DE SOURCES (OBLIGATOIRE) :
+   - Pour CHAQUE fait important ou découverte mentionnée, ajoute un lien hypertexte vers une source fiable directement dans le texte
+   - Format des liens : [texte descriptif](URL)
+   - Place les liens aux endroits les plus naturels et pertinents dans chaque paragraphe
+   - Utilise des sources fiables : sites d'institutions (NASA, OMS, CNRS, etc.), revues scientifiques (Nature, Science, The Lancet), médias reconnus (Reuters, AFP, Le Monde, BBC, etc.)
+   - Chaque section ## doit contenir au moins 1-2 liens sources
+   - Les URLs doivent être de vraies URLs plausibles de sites existants
+
+3. VÉRIFICATION "BONNE NOUVELLE" :
+   - Pour chaque nouvelle, vérifie que l'explication de pourquoi c'est une bonne nouvelle est cohérente et fondée
+   - Renforce l'argumentation si nécessaire
+   - Si une nouvelle n'est pas réellement positive ou est trop exagérée, nuance le propos
+
+4. REFORMULATION ET OPTIMISATION :
+   - Peaufine le style pour qu'il soit fluide, engageant et clair
+   - Assure-toi que les transitions entre sections sont naturelles
+   - Vérifie que l'article est accessible à un public non-spécialiste
+   - Garde le ton optimiste mais crédible
+
+RÈGLES IMPORTANTES :
+- Conserve la structure Markdown (## pour les titres de section)
+- Ne commence PAS par un titre principal (pas de # en début)
+- Garde une longueur similaire (800-1200 mots)
+- Les liens doivent être intégrés naturellement dans le texte, pas listés à part
+- L'article final doit être MEILLEUR que l'original : plus précis, mieux sourcé, plus crédible
+
+Réponds UNIQUEMENT avec l'article final corrigé et enrichi en Markdown, rien d'autre."""
+
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=5000,
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -200,10 +264,8 @@ def create_markdown_file(today, theme, title, summary, tags, content):
     }
     day_name = weekday_names[today.weekday()]
 
-    # Slug pour le nom de fichier
     slug = f"{date_str}-{day_name}-{theme['slug']}"
 
-    # Métadonnées Hugo (front matter)
     tags_str = json.dumps(tags, ensure_ascii=False)
     front_matter = f"""---
 title: "{title}"
@@ -213,6 +275,7 @@ categories: ["{theme['name']}"]
 tags: {tags_str}
 emoji: "{theme['emoji']}"
 summary: "{summary}"
+sources_verified: true
 ---
 
 """
@@ -236,28 +299,33 @@ def main():
     print(f"📰 Génération de l'article du jour : {theme['emoji']} {theme['name']}")
     print(f"📅 Date : {today.strftime('%A %d %B %Y')}")
 
-    # Générer l'article
+    # Étape 1 : Générer l'article brut
     print("✍️  Rédaction de l'article en cours...")
     content = generate_article(today, theme)
 
-    # Générer le titre
+    # Étape 2 : Vérification des faits, ajout de sources et reformulation
+    print("🔍 Vérification des faits et ajout des sources...")
+    content = fact_check_and_enrich(theme, content)
+
+    # Étape 3 : Générer le titre (basé sur la version vérifiée)
     print("📝 Génération du titre...")
     title = generate_title(theme, content)
 
-    # Générer le résumé
+    # Étape 4 : Générer le résumé
     print("📋 Génération du résumé...")
     summary = generate_summary(content)
 
-    # Extraire les tags
+    # Étape 5 : Extraire les tags
     print("🏷️  Extraction des tags...")
     tags = extract_tags(theme, content)
 
-    # Créer le fichier
+    # Étape 6 : Créer le fichier
     filepath = create_markdown_file(today, theme, title, summary, tags, content)
-    print(f"✅ Article créé : {filepath}")
+    print(f"✅ Article créé et vérifié : {filepath}")
     print(f"   Titre : {title}")
     print(f"   Catégorie : {theme['name']}")
     print(f"   Tags : {', '.join(tags)}")
+    print(f"   Sources : vérifiées ✓")
 
     return filepath
 

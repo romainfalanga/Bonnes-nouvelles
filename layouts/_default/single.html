@@ -2,10 +2,10 @@
 {{ $categoryClass := "" }}
 {{ range .Params.categories }}
   {{ if eq . "Intelligence Artificielle" }}{{ $categoryClass = "cat-ia" }}
-  {{ else if eq . "Technologie" }}{{ $categoryClass = "cat-tech" }}
-  {{ else if eq . "Ecologie" }}{{ $categoryClass = "cat-eco" }}
-  {{ else if eq . "Innovation" }}{{ $categoryClass = "cat-innov" }}
-  {{ else if eq . "Idees Incroyables" }}{{ $categoryClass = "cat-idees" }}
+  {{ else if eq . "Médecine et Santé" }}{{ $categoryClass = "cat-med" }}
+  {{ else if eq . "Physique et Univers" }}{{ $categoryClass = "cat-phys" }}
+  {{ else if eq . "Invention" }}{{ $categoryClass = "cat-inv" }}
+  {{ else if eq . "Écologie" }}{{ $categoryClass = "cat-eco" }}
   {{ end }}
 {{ end }}
 

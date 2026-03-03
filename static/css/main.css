@@ -21,14 +21,14 @@
   /* Category colors */
   --cat-ia: #7C3AED;
   --cat-ia-light: #EDE9FE;
-  --cat-tech: #0891B2;
-  --cat-tech-light: #ECFEFF;
+  --cat-med: #0891B2;
+  --cat-med-light: #ECFEFF;
+  --cat-phys: #4F46E5;
+  --cat-phys-light: #EEF2FF;
+  --cat-inv: #EA580C;
+  --cat-inv-light: #FFF7ED;
   --cat-eco: #059669;
   --cat-eco-light: #ECFDF5;
-  --cat-innov: #EA580C;
-  --cat-innov-light: #FFF7ED;
-  --cat-idees: #D97706;
-  --cat-idees-light: #FFFBEB;
 
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Playfair Display', Georgia, serif;
@@ -314,17 +314,17 @@ img {
 .cat-ia .card-emoji { filter: none; }
 .cat-ia:hover { border-color: var(--cat-ia); }
 
-.cat-tech .card-category { color: var(--cat-tech); }
-.cat-tech:hover { border-color: var(--cat-tech); }
+.cat-med .card-category { color: var(--cat-med); }
+.cat-med:hover { border-color: var(--cat-med); }
+
+.cat-phys .card-category { color: var(--cat-phys); }
+.cat-phys:hover { border-color: var(--cat-phys); }
+
+.cat-inv .card-category { color: var(--cat-inv); }
+.cat-inv:hover { border-color: var(--cat-inv); }
 
 .cat-eco .card-category { color: var(--cat-eco); }
 .cat-eco:hover { border-color: var(--cat-eco); }
-
-.cat-innov .card-category { color: var(--cat-innov); }
-.cat-innov:hover { border-color: var(--cat-innov); }
-
-.cat-idees .card-category { color: var(--cat-idees); }
-.cat-idees:hover { border-color: var(--cat-idees); }
 
 /* --- Single Article --- */
 .article-single .article-header {
@@ -333,10 +333,10 @@ img {
 }
 
 .article-single.cat-ia .article-header { background: var(--cat-ia-light); }
-.article-single.cat-tech .article-header { background: var(--cat-tech-light); }
+.article-single.cat-med .article-header { background: var(--cat-med-light); }
+.article-single.cat-phys .article-header { background: var(--cat-phys-light); }
+.article-single.cat-inv .article-header { background: var(--cat-inv-light); }
 .article-single.cat-eco .article-header { background: var(--cat-eco-light); }
-.article-single.cat-innov .article-header { background: var(--cat-innov-light); }
-.article-single.cat-idees .article-header { background: var(--cat-idees-light); }
 
 .article-meta {
   display: flex;
@@ -357,10 +357,10 @@ img {
 }
 
 .cat-ia .article-category { color: var(--cat-ia); }
-.cat-tech .article-category { color: var(--cat-tech); }
+.cat-med .article-category { color: var(--cat-med); }
+.cat-phys .article-category { color: var(--cat-phys); }
+.cat-inv .article-category { color: var(--cat-inv); }
 .cat-eco .article-category { color: var(--cat-eco); }
-.cat-innov .article-category { color: var(--cat-innov); }
-.cat-idees .article-category { color: var(--cat-idees); }
 
 .article-meta time {
   font-size: 0.85rem;

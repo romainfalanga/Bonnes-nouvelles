@@ -33,7 +33,7 @@ jobs:
       - name: "📦 Installation des dépendances"
         run: pip install -r scripts/requirements.txt
 
-      - name: "📰 Génération de l'article du jour"
+      - name: "📰 Génération et vérification de l'article du jour"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/generate-article.py
