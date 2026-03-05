@@ -9,6 +9,27 @@
   {{ end }}
 {{ end }}
 
+<nav class="breadcrumb" aria-label="Fil d'Ariane">
+  <div class="container">
+    <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="/"><span itemprop="name">Accueil</span></a>
+        <meta itemprop="position" content="1">
+      </li>
+      {{ range .Params.categories }}
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="{{ "/categories/" | relURL }}{{ . | urlize }}/"><span itemprop="name">{{ . }}</span></a>
+        <meta itemprop="position" content="2">
+      </li>
+      {{ end }}
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <span itemprop="name">{{ .Title }}</span>
+        <meta itemprop="position" content="3">
+      </li>
+    </ol>
+  </div>
+</nav>
+
 <article class="article-single {{ $categoryClass }}">
   <header class="article-header">
     <div class="container">
@@ -41,10 +62,10 @@
 
       <div class="article-nav">
         {{ with .PrevInSection }}
-        <a href="{{ .Permalink }}" class="nav-prev">← {{ .Title }}</a>
+        <a href="{{ .Permalink }}" class="nav-prev">{{ .Title }}</a>
         {{ end }}
         {{ with .NextInSection }}
-        <a href="{{ .Permalink }}" class="nav-next">{{ .Title }} →</a>
+        <a href="{{ .Permalink }}" class="nav-next">{{ .Title }}</a>
         {{ end }}
       </div>
     </div>

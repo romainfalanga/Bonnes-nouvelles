@@ -158,12 +158,12 @@ ACTUALITÉS VÉRIFIÉES À UTILISER :
 
 INSTRUCTIONS :
 1. Rédige un article structuré et engageant basé UNIQUEMENT sur ces actualités vérifiées
-2. N'invente AUCUN fait, chiffre ou source — utilise uniquement les données fournies
+2. N'invente AUCUN fait, chiffre ou source, utilise uniquement les données fournies
 3. Intègre les liens sources directement dans le texte de manière naturelle
 
 FORMAT DE L'ARTICLE (en Markdown) :
 - Commence directement par une introduction engageante (2-3 phrases)
-- Pour chaque bonne nouvelle, crée une section avec un titre ## accrocheur
+- Pour chaque bonne nouvelle, crée une section avec un titre ## accrocheur et optimisé SEO (inclure le mot-clé principal du sujet)
 - Chaque section fait 2-3 paragraphes avec les détails concrets des sources
 - Pour chaque fait, intègre un lien hypertexte vers la source : [texte](URL)
 - Explique clairement POURQUOI c'est une bonne nouvelle et CE QUE ÇA CHANGE
@@ -176,6 +176,15 @@ IMPORTANT :
 - Utilise TOUS les liens sources fournis dans les actualités
 - Garde un ton positif et inspirant
 - Écris en français courant, pas trop formel
+
+STYLE D'ÉCRITURE OBLIGATOIRE :
+- N'utilise JAMAIS le tiret cadratin (—) ni le tiret demi-cadratin (–) pour faire des incises. Utilise des virgules, des parenthèses ou reformule la phrase
+- N'utilise JAMAIS "il est important de noter que", "il convient de souligner", "force est de constater"
+- N'utilise JAMAIS "en effet", "par ailleurs", "en outre", "de surcroît", "à cet égard", "en somme"
+- Évite les formulations génériques comme "dans un monde où...", "à l'heure où..."
+- Préfère les phrases courtes et directes aux phrases longues avec beaucoup de subordonnées
+- Varie la structure des phrases : commence parfois par le sujet, parfois par un complément, parfois par un verbe
+- Écris comme un vrai journaliste humain, pas comme un assistant IA
 
 Réponds UNIQUEMENT avec le contenu Markdown de l'article, rien d'autre."""
 
@@ -201,10 +210,17 @@ MISSIONS :
 
 2. VÉRIFICATION DES LIENS :
    - Vérifie que chaque URL dans l'article mène bien à un contenu existant et pertinent
-   - Si une URL est cassée ou ne correspond pas au contenu mentionné, remplace-la par la bonne URL
+   - Si une URL est cassée ou ne correspond pas au contenu mentionné, remplace-la par la bonne URL trouvée via recherche web
    - Si tu ne trouves pas de bon lien de remplacement, remplace par un lien vers un article pertinent du même média ou d'un média fiable
+   - CHAQUE lien dans l'article final doit pointer vers une page web qui existe réellement
 
-3. QUALITÉ ÉDITORIALE :
+3. NETTOYAGE DU STYLE (ANTI-IA) :
+   - Remplace TOUS les tirets cadratins (—) et demi-cadratins (–) utilisés comme incises par des virgules, parenthèses ou reformulations
+   - Supprime les tournures typiques de l'IA : "il est important de noter", "il convient de souligner", "force est de constater", "en effet", "par ailleurs", "en outre", "de surcroît"
+   - Remplace les formulations pompeuses par des phrases simples et directes
+   - Le texte doit sembler écrit par un journaliste humain
+
+4. QUALITÉ ÉDITORIALE :
    - Peaufine le style pour qu'il soit fluide et engageant
    - Assure-toi que les transitions entre sections sont naturelles
    - Garde le ton optimiste mais crédible
@@ -215,6 +231,7 @@ RÈGLES :
 - Garde une longueur similaire (800-1200 mots)
 - Chaque section ## doit contenir au moins 1 lien source vérifié
 - Les liens doivent être intégrés naturellement dans le texte
+- AUCUN tiret cadratin (—) ni demi-cadratin (–) dans le texte final
 
 Réponds UNIQUEMENT avec l'article final corrigé en Markdown, rien d'autre."""
 
@@ -223,9 +240,12 @@ Réponds UNIQUEMENT avec l'article final corrigé en Markdown, rien d'autre."""
 
 def generate_title(client, theme, article_content):
     """Génère un titre accrocheur via Claude Haiku."""
-    prompt = f"""Génère UN titre court et accrocheur (max 80 caractères) pour cet article de blog sur les bonnes nouvelles en {theme['name']}.
-Le titre doit être optimiste et donner envie de lire.
-Ne mets PAS de guillemets autour du titre.
+    prompt = f"""Génère UN titre court et accrocheur (max 65 caractères) pour cet article de blog sur les bonnes nouvelles en {theme['name']}.
+Le titre doit :
+- Être optimiste et donner envie de lire
+- Contenir le mot-clé principal du sujet pour le SEO
+- Ne PAS contenir de tiret cadratin (—) ni de tiret demi-cadratin (–)
+- Ne PAS être entouré de guillemets
 
 Début de l'article :
 {article_content[:500]}
@@ -238,13 +258,16 @@ Réponds UNIQUEMENT avec le titre, rien d'autre."""
 
 def generate_summary(client, article_content):
     """Génère un résumé court via Claude Haiku."""
-    prompt = f"""Génère un résumé de 1-2 phrases (max 160 caractères) pour cet article.
-Le résumé doit donner envie de lire l'article complet.
+    prompt = f"""Génère une meta description SEO de 1-2 phrases (entre 120 et 155 caractères) pour cet article.
+La description doit :
+- Donner envie de cliquer depuis les résultats Google
+- Contenir les mots-clés principaux de l'article
+- Ne PAS contenir de tiret cadratin (—) ni de tiret demi-cadratin (–)
 
 Article :
 {article_content[:1000]}
 
-Réponds UNIQUEMENT avec le résumé, rien d'autre."""
+Réponds UNIQUEMENT avec la description, rien d'autre."""
 
     return chat(client, MODEL_LIGHT, [{"role": "user", "content": prompt}], max_tokens=200).strip()
 
@@ -265,6 +288,16 @@ Réponds UNIQUEMENT avec les tags séparés par des virgules."""
     return tags
 
 
+def clean_ai_patterns(text):
+    """Supprime les patterns typiques de texte généré par IA."""
+    # Remplacer les tirets cadratins et demi-cadratins par des virgules
+    text = text.replace(" — ", ", ")
+    text = text.replace(" – ", ", ")
+    text = text.replace("—", ", ")
+    text = text.replace("–", ", ")
+    return text
+
+
 def create_markdown_file(today, theme, title, summary, tags, content):
     """Crée le fichier Markdown avec les métadonnées Hugo."""
     date_str = today.strftime("%Y-%m-%d")
@@ -280,14 +313,18 @@ def create_markdown_file(today, theme, title, summary, tags, content):
     slug = f"{date_str}-{day_name}-{theme['slug']}"
 
     tags_str = json.dumps(tags, ensure_ascii=False)
+    # Échapper les guillemets dans le titre et le résumé pour le front matter YAML
+    safe_title = title.replace('"', '\\"')
+    safe_summary = summary.replace('"', '\\"')
     front_matter = f"""---
-title: "{title}"
+title: "{safe_title}"
 date: {date_str}T12:00:00+01:00
 draft: false
+description: "{safe_summary}"
 categories: ["{theme['name']}"]
 tags: {tags_str}
 emoji: "{theme['emoji']}"
-summary: "{summary}"
+summary: "{safe_summary}"
 sources_verified: true
 ---
 
@@ -333,13 +370,16 @@ def main():
     print(f"🔍 Vérification des faits et des liens via Perplexity ({MODEL_CHECKER})...")
     content = fact_check_and_verify_links(client, theme, content)
 
-    # Étape 4 : Titre, résumé, tags via Claude Haiku (rapide et économique)
+    # Étape 4 : Nettoyage des patterns IA résiduels
+    content = clean_ai_patterns(content)
+
+    # Étape 5 : Titre, résumé, tags via Claude Haiku (rapide et économique)
     print(f"📝 Génération du titre, résumé et tags via Claude Haiku ({MODEL_LIGHT})...")
-    title = generate_title(client, theme, content)
-    summary = generate_summary(client, content)
+    title = clean_ai_patterns(generate_title(client, theme, content))
+    summary = clean_ai_patterns(generate_summary(client, content))
     tags = extract_tags(client, theme, content)
 
-    # Étape 5 : Créer le fichier
+    # Étape 6 : Créer le fichier
     filepath = create_markdown_file(today, theme, title, summary, tags, content)
     print(f"✅ Article créé et vérifié : {filepath}")
     print(f"   Titre : {title}")
