@@ -308,9 +308,9 @@ def clean_ai_patterns(text):
     text = text.replace("–", ", ")
     # Supprimer les emojis courants dans les titres
     text = re.sub(
-        r'[\U0001F300-\U0001F9FF\U00002702-\U000027B0\U0000FE00-\U0000FE0F'
-        r'\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002600-\U000026FF'
-        r'\U0000200D\U00002B50]+',
+        '[\U0001F300-\U0001F9FF\U00002702-\U000027B0\U0000FE00-\U0000FE0F'
+        '\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002600-\U000026FF'
+        '\U0000200D\U00002B50]+',
         '', text
     )
     return text
