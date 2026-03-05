@@ -36,6 +36,7 @@ jobs:
       - name: "📰 Génération et vérification de l'article du jour"
         env:
           MAMMOUTH_API_KEY: ${{ secrets.MAMMOUTH_API_KEY }}
+          FORCE_DATE: ${{ inputs.force_date }}
         run: python scripts/generate-article.py
 
       - name: "📤 Commit et push"
