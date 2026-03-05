@@ -19,9 +19,13 @@ import sys
 import json
 import re
 import datetime
+import zoneinfo
 from openai import OpenAI
 
 MAMMOUTH_BASE_URL = "https://api.mammouth.ai/v1"
+
+# Fuseau horaire de référence
+TIMEZONE = zoneinfo.ZoneInfo("Europe/Paris")
 
 # Modèles spécialisés par tâche
 MODEL_SEARCH = "sonar-pro"          # Perplexity : accès web, recherche d'actualités
@@ -46,7 +50,7 @@ THEMES = {
     2: {
         "name": "Physique et Univers",
         "slug": "physique-et-univers",
-        "search_terms": "découverte physique astronomie univers espace sciences",
+        "search_terms": "bonnes nouvelles physique astronomie univers espace sciences",
         "description": "Les découvertes fascinantes en physique et astronomie",
     },
     3: {
@@ -84,7 +88,8 @@ def chat(client, model, messages, max_tokens):
 
 def get_today_theme():
     """Retourne le thème du jour basé sur le jour de la semaine.
-    Supporte la variable d'environnement FORCE_DATE (YYYY-MM-DD) pour forcer une date."""
+    Supporte la variable d'environnement FORCE_DATE (YYYY-MM-DD) pour forcer une date.
+    Utilise toujours le fuseau horaire Europe/Paris."""
     force_date = os.environ.get("FORCE_DATE", "").strip()
     if force_date:
         try:
@@ -94,7 +99,8 @@ def get_today_theme():
             print(f"[Nova] Erreur : date invalide '{force_date}', format attendu YYYY-MM-DD")
             sys.exit(1)
     else:
-        today = datetime.date.today()
+        today = datetime.datetime.now(TIMEZONE).date()
+        print(f"[Nova] Date du jour (Europe/Paris) : {today}")
 
     weekday = today.weekday()  # 0=lundi, 6=dimanche
 
@@ -108,22 +114,30 @@ def get_today_theme():
 def search_news(client, today, theme):
     """Étape 1 : Recherche d'actualités réelles via Perplexity (sonar-pro).
     Perplexity a un accès web natif et retourne des infos vérifiées avec sources."""
-    date_from = (today - datetime.timedelta(days=7)).strftime("%d/%m/%Y")
-    date_to = today.strftime("%d/%m/%Y")
+    date_from = today - datetime.timedelta(days=7)
+    date_from_fr = date_from.strftime("%d/%m/%Y")
+    date_to_fr = today.strftime("%d/%m/%Y")
+    date_from_iso = date_from.isoformat()
+    date_to_iso = today.isoformat()
 
     prompt = f"""Recherche les bonnes nouvelles et actualités positives RÉELLES et RÉCENTES
-dans le domaine "{theme['name']}" entre le {date_from} et le {date_to}.
+dans le domaine "{theme['name']}".
+
+PÉRIODE STRICTE : du {date_from_fr} au {date_to_fr} (soit du {date_from_iso} au {date_to_iso}).
+IMPORTANT : ne retourne QUE des actualités publiées entre ces deux dates. Ignore tout article plus ancien.
 
 Termes de recherche : {theme['search_terms']}
 
 INSTRUCTIONS :
-1. Trouve 3 à 5 actualités positives RÉELLES et VÉRIFIÉES de la dernière semaine
+1. Trouve 3 à 5 actualités positives RÉELLES et VÉRIFIÉES publiées entre le {date_from_fr} et le {date_to_fr}
 2. Pour CHAQUE actualité, fournis :
    - Un titre descriptif
    - Un résumé de 3-4 phrases avec des faits précis (chiffres, noms, dates, lieux)
+   - La DATE DE PUBLICATION de l'article source (format YYYY-MM-DD)
    - L'URL source EXACTE de l'article original (pas une URL inventée)
    - Le nom du média ou de l'institution source
 3. Privilégie les sources francophones quand elles existent, sinon utilise des sources internationales fiables
+4. REJETTE toute actualité dont la date de publication est antérieure au {date_from_fr}
 
 FORMAT DE RÉPONSE (JSON) :
 {{
@@ -131,6 +145,7 @@ FORMAT DE RÉPONSE (JSON) :
     {{
       "title": "Titre de la nouvelle",
       "summary": "Résumé avec faits précis...",
+      "published_date": "YYYY-MM-DD",
       "source_url": "https://...",
       "source_name": "Nom du média",
       "why_good_news": "Pourquoi c'est une bonne nouvelle"
@@ -145,7 +160,22 @@ Réponds UNIQUEMENT avec le JSON, rien d'autre."""
     # Extraire le JSON de la réponse
     json_match = re.search(r'\{[\s\S]*\}', result)
     if json_match:
-        return json.loads(json_match.group())
+        data = json.loads(json_match.group())
+        # Filtrer les actualités hors période
+        filtered_news = []
+        for news in data.get("news", []):
+            pub_date_str = news.get("published_date", "")
+            if pub_date_str:
+                try:
+                    pub_date = datetime.date.fromisoformat(pub_date_str)
+                    if pub_date < date_from:
+                        print(f"[Nova] Actualite ignoree (trop ancienne : {pub_date}) : {news.get('title', '?')}")
+                        continue
+                except ValueError:
+                    pass
+            filtered_news.append(news)
+        data["news"] = filtered_news
+        return data
     return {"news": []}
 
 
@@ -403,6 +433,18 @@ def main():
     print(f"[Nova] Categorie : {theme['name']}")
     print(f"[Nova] Tags : {', '.join(tags)}")
     print(f"[Nova] Pipeline : {MODEL_SEARCH} > {MODEL_WRITER} > {MODEL_CHECKER} > {MODEL_LIGHT}")
+
+    # Exporter la date de l'article pour le workflow (GitHub Actions output)
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        weekday_names_fr = {
+            0: "lundi", 1: "mardi", 2: "mercredi", 3: "jeudi", 4: "vendredi",
+        }
+        day_name = weekday_names_fr[today.weekday()]
+        with open(github_output, "a") as f:
+            f.write(f"article_date={today.isoformat()}\n")
+            f.write(f"article_day={day_name}\n")
+            f.write(f"article_theme={theme['name']}\n")
 
     return filepath
 

@@ -1,8 +1,8 @@
-name: "📰 Publication quotidienne - Bonnes Nouvelles"
+name: "Publication quotidienne - Bonnes Nouvelles"
 
 on:
   schedule:
-    # Tous les jours à 12h00 (heure de Paris = 11h00 UTC)
+    # Tous les jours à 12h00 heure de Paris (11h00 UTC, ou 10h00 UTC en été)
     # Du lundi au vendredi uniquement
     - cron: "0 11 * * 1-5"
   workflow_dispatch:
@@ -15,31 +15,35 @@ on:
 permissions:
   contents: write
 
+env:
+  TZ: Europe/Paris
+
 jobs:
   generate-article:
     runs-on: ubuntu-latest
     steps:
-      - name: "📥 Checkout du repository"
+      - name: "Checkout du repository"
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      - name: "🐍 Installation de Python"
+      - name: "Installation de Python"
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: "📦 Installation des dépendances"
+      - name: "Installation des dépendances"
         run: pip install -r scripts/requirements.txt
 
-      - name: "📰 Génération et vérification de l'article du jour"
+      - name: "Generation et verification de l'article du jour"
+        id: generate
         env:
           MAMMOUTH_API_KEY: ${{ secrets.MAMMOUTH_API_KEY }}
           FORCE_DATE: ${{ inputs.force_date }}
         run: python scripts/generate-article.py
 
-      - name: "📤 Commit et push"
+      - name: "Commit et push"
         run: |
           git config user.name "Bonnes Nouvelles Bot"
           git config user.email "bot@bonnes-nouvelles.fr"
@@ -47,11 +51,20 @@ jobs:
 
           # Vérifier s'il y a des changements
           if git diff --staged --quiet; then
-            echo "Aucun nouvel article à publier."
+            echo "Aucun nouvel article a publier."
             exit 0
           fi
 
-          DATE=$(date +%Y-%m-%d)
-          DAY=$(date +%A)
-          git commit -m "📰 Article du ${DAY} ${DATE}"
+          # Utiliser la date de l'article (pas la date systeme)
+          ARTICLE_DATE="${{ steps.generate.outputs.article_date }}"
+          ARTICLE_DAY="${{ steps.generate.outputs.article_day }}"
+          ARTICLE_THEME="${{ steps.generate.outputs.article_theme }}"
+
+          if [ -z "$ARTICLE_DATE" ]; then
+            ARTICLE_DATE=$(date +%Y-%m-%d)
+            ARTICLE_DAY=$(date +%A)
+            ARTICLE_THEME="actualite"
+          fi
+
+          git commit -m "Article du ${ARTICLE_DAY} ${ARTICLE_DATE} - ${ARTICLE_THEME}"
           git push
