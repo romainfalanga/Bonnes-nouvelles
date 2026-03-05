@@ -101,7 +101,7 @@ img {
 }
 
 .logo-icon {
-  font-size: 1.6rem;
+  display: none;
 }
 
 .nav-links {
@@ -253,22 +253,11 @@ img {
   padding: 28px;
 }
 
-.card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.card-emoji {
-  font-size: 2.2rem;
-  line-height: 1;
-}
-
 .card-meta {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .card-category {

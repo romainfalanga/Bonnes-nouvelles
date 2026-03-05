@@ -39,7 +39,7 @@
         {{ end }}
         <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2 January 2006" }}</time>
       </div>
-      <h1 class="article-title">{{ with .Params.emoji }}{{ . }} {{ end }}{{ .Title }}</h1>
+      <h1 class="article-title">{{ .Title }}</h1>
       {{ with .Params.summary }}<p class="article-summary">{{ . }}</p>{{ end }}
     </div>
   </header>

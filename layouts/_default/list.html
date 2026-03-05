@@ -1,19 +1,7 @@
 {{ define "main" }}
 <section class="page-header">
   <div class="container">
-    <h1 class="page-title">
-      {{ if .Data.Singular }}
-        {{ if eq .Data.Singular "category" }}
-          {{ $cat := .Title }}
-          {{ if eq $cat "Intelligence Artificielle" }}🤖{{ end }}
-          {{ if eq $cat "Médecine et Santé" }}🏥{{ end }}
-          {{ if eq $cat "Physique et Univers" }}🔭{{ end }}
-          {{ if eq $cat "Invention" }}💡{{ end }}
-          {{ if eq $cat "Écologie" }}🌿{{ end }}
-        {{ end }}
-      {{ end }}
-      {{ .Title }}
-    </h1>
+    <h1 class="page-title">{{ .Title }}</h1>
     {{ with .Description }}<p class="page-description">{{ . }}</p>{{ end }}
   </div>
 </section>
