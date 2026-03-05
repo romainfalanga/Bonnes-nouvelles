@@ -326,6 +326,38 @@ img {
 .cat-eco .card-category { color: var(--cat-eco); }
 .cat-eco:hover { border-color: var(--cat-eco); }
 
+/* --- Breadcrumb --- */
+.breadcrumb {
+  background: var(--color-bg);
+  padding: 12px 0;
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+}
+
+.breadcrumb ol {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.breadcrumb li:not(:last-child)::after {
+  content: ">";
+  margin: 0 8px;
+  color: var(--color-border);
+}
+
+.breadcrumb a {
+  color: var(--color-accent);
+  transition: color var(--transition);
+}
+
+.breadcrumb a:hover {
+  color: #D97706;
+  text-decoration: underline;
+}
+
 /* --- Single Article --- */
 .article-single .article-header {
   padding: 60px 0 40px;
