@@ -83,12 +83,23 @@ def chat(client, model, messages, max_tokens):
 
 
 def get_today_theme():
-    """Retourne le thème du jour basé sur le jour de la semaine."""
-    today = datetime.date.today()
+    """Retourne le thème du jour basé sur le jour de la semaine.
+    Supporte la variable d'environnement FORCE_DATE (YYYY-MM-DD) pour forcer une date."""
+    force_date = os.environ.get("FORCE_DATE", "").strip()
+    if force_date:
+        try:
+            today = datetime.date.fromisoformat(force_date)
+            print(f"[Nova] Date forcee : {today}")
+        except ValueError:
+            print(f"[Nova] Erreur : date invalide '{force_date}', format attendu YYYY-MM-DD")
+            sys.exit(1)
+    else:
+        today = datetime.date.today()
+
     weekday = today.weekday()  # 0=lundi, 6=dimanche
 
     if weekday > 4:  # Week-end
-        print("Pas de publication le week-end.")
+        print("[Nova] Pas de publication le week-end.")
         sys.exit(0)
 
     return today, THEMES[weekday]
