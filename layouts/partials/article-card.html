@@ -1,36 +1,27 @@
 {{ $categoryClass := "" }}
-{{ $categoryEmoji := "" }}
 {{ range .Params.categories }}
   {{ if eq . "Intelligence Artificielle" }}
     {{ $categoryClass = "cat-ia" }}
-    {{ $categoryEmoji = "🤖" }}
   {{ else if eq . "Médecine et Santé" }}
     {{ $categoryClass = "cat-med" }}
-    {{ $categoryEmoji = "🏥" }}
   {{ else if eq . "Physique et Univers" }}
     {{ $categoryClass = "cat-phys" }}
-    {{ $categoryEmoji = "🔭" }}
   {{ else if eq . "Invention" }}
     {{ $categoryClass = "cat-inv" }}
-    {{ $categoryEmoji = "💡" }}
   {{ else if eq . "Écologie" }}
     {{ $categoryClass = "cat-eco" }}
-    {{ $categoryEmoji = "🌿" }}
   {{ end }}
 {{ end }}
 <article class="article-card {{ $categoryClass }}">
   <a href="{{ .Permalink }}">
-    <div class="card-header">
-      <span class="card-emoji">{{ with .Params.emoji }}{{ . }}{{ else }}{{ $categoryEmoji }}{{ end }}</span>
-      <div class="card-meta">
-        {{ range .Params.categories }}
-        <span class="card-category">{{ . }}</span>
-        {{ end }}
-        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2 January 2006" }}</time>
-      </div>
+    <div class="card-meta">
+      {{ range .Params.categories }}
+      <span class="card-category">{{ . }}</span>
+      {{ end }}
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2 January 2006" }}</time>
     </div>
     <h2 class="card-title">{{ .Title }}</h2>
     <p class="card-summary">{{ with .Params.summary }}{{ . }}{{ else }}{{ .Summary }}{{ end }}</p>
-    <span class="card-read-more">Lire l'article →</span>
+    <span class="card-read-more">Lire l'article</span>
   </a>
 </article>

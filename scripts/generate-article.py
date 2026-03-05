@@ -3,7 +3,7 @@
 Script de génération automatique d'articles pour Bonnes Nouvelles.
 Pipeline multi-IA via l'API Mammouth :
   - Perplexity (sonar-pro) : recherche d'actualités réelles + fact-checking
-  - Claude Sonnet : rédaction de l'article
+  - Claude Sonnet : rédaction de l'article (persona Nova)
   - Claude Haiku : titre, résumé, tags (tâches légères)
 
 Thèmes par jour :
@@ -34,35 +34,30 @@ THEMES = {
     0: {
         "name": "Intelligence Artificielle",
         "slug": "intelligence-artificielle",
-        "emoji": "🤖",
         "search_terms": "bonnes nouvelles intelligence artificielle IA découverte avancée",
         "description": "Les avancées positives dans le monde de l'IA",
     },
     1: {
         "name": "Médecine et Santé",
         "slug": "medecine-et-sante",
-        "emoji": "🏥",
         "search_terms": "bonnes nouvelles médecine santé découverte médicale traitement",
         "description": "Les découvertes médicales et avancées en santé",
     },
     2: {
         "name": "Physique et Univers",
         "slug": "physique-et-univers",
-        "emoji": "🔭",
         "search_terms": "découverte physique astronomie univers espace sciences",
         "description": "Les découvertes fascinantes en physique et astronomie",
     },
     3: {
         "name": "Invention",
         "slug": "invention",
-        "emoji": "💡",
         "search_terms": "invention innovation technologie brevet découverte",
         "description": "Les inventions qui changent le monde",
     },
     4: {
         "name": "Écologie",
         "slug": "ecologie",
-        "emoji": "🌿",
         "search_terms": "bonnes nouvelles écologie environnement climat biodiversité",
         "description": "Les avancées positives pour notre planète",
     },
@@ -144,47 +139,49 @@ Réponds UNIQUEMENT avec le JSON, rien d'autre."""
 
 
 def write_article(client, today, theme, research_data):
-    """Étape 2 : Rédaction de l'article par Claude Sonnet à partir des données réelles."""
+    """Étape 2 : Rédaction de l'article par Claude Sonnet (persona Nova)."""
     date_from = (today - datetime.timedelta(days=7)).strftime("%d/%m/%Y")
     date_to = today.strftime("%d/%m/%Y")
 
+    news_count = len(research_data["news"])
     news_text = json.dumps(research_data["news"], ensure_ascii=False, indent=2)
 
-    prompt = f"""Tu es un journaliste optimiste pour le blog "Bonnes Nouvelles".
-Ta mission : écrire un article en français basé sur les actualités RÉELLES ci-dessous dans le domaine "{theme['name']}" de la semaine du {date_from} au {date_to}.
+    prompt = f"""Tu es Nova, chroniqueuse IA du blog "Bonnes Nouvelles". Ta mission : documenter les progrès de l'humanité dans le domaine "{theme['name']}".
+
+Écris un article en français basé sur les {news_count} actualités RÉELLES ci-dessous, couvrant la semaine du {date_from} au {date_to}.
 
 ACTUALITÉS VÉRIFIÉES À UTILISER :
 {news_text}
 
-INSTRUCTIONS :
-1. Rédige un article structuré et engageant basé UNIQUEMENT sur ces actualités vérifiées
-2. N'invente AUCUN fait, chiffre ou source, utilise uniquement les données fournies
-3. Intègre les liens sources directement dans le texte de manière naturelle
+STRUCTURE OBLIGATOIRE DE L'ARTICLE :
 
-FORMAT DE L'ARTICLE (en Markdown) :
-- Commence directement par une introduction engageante (2-3 phrases)
-- Pour chaque bonne nouvelle, crée une section avec un titre ## accrocheur et optimisé SEO (inclure le mot-clé principal du sujet)
-- Chaque section fait 2-3 paragraphes avec les détails concrets des sources
-- Pour chaque fait, intègre un lien hypertexte vers la source : [texte](URL)
-- Explique clairement POURQUOI c'est une bonne nouvelle et CE QUE ÇA CHANGE
-- Termine par une conclusion optimiste sur les tendances positives
-- Ton : enthousiaste mais factuel, accessible à tous
-- Longueur : 800-1200 mots environ
+1. INTRODUCTION (un paragraphe) :
+   - Résume en 3-4 phrases les sujets qui seront abordés dans l'article
+   - Donne au lecteur une vue d'ensemble de ce qu'il va découvrir
+   - Mentionne brièvement chaque nouvelle pour donner envie de lire la suite
+   - Exemple de structure : "Cette semaine en [domaine], [résumé nouvelle 1], [résumé nouvelle 2] et [résumé nouvelle 3]. Voici le détail de ces avancées."
 
-IMPORTANT :
-- Ne commence PAS par le titre de l'article (il sera dans les métadonnées)
-- Utilise TOUS les liens sources fournis dans les actualités
-- Garde un ton positif et inspirant
-- Écris en français courant, pas trop formel
+2. SECTIONS (une par nouvelle) :
+   - Titre ## en texte brut, accrocheur et optimisé SEO (mot-clé principal inclus)
+   - AUCUN emoji dans les titres ni dans le texte
+   - 2-3 paragraphes avec les détails concrets des sources
+   - Pour chaque fait, intègre un lien hypertexte vers la source : [texte](URL)
+   - Explique clairement POURQUOI c'est une bonne nouvelle et CE QUE ÇA CHANGE
+
+3. CONCLUSION (un paragraphe) :
+   - Synthèse des tendances positives de la semaine
 
 STYLE D'ÉCRITURE OBLIGATOIRE :
-- N'utilise JAMAIS le tiret cadratin (—) ni le tiret demi-cadratin (–) pour faire des incises. Utilise des virgules, des parenthèses ou reformule la phrase
+- AUCUN emoji nulle part dans l'article
+- N'utilise JAMAIS le tiret cadratin ou le tiret demi-cadratin pour faire des incises
 - N'utilise JAMAIS "il est important de noter que", "il convient de souligner", "force est de constater"
 - N'utilise JAMAIS "en effet", "par ailleurs", "en outre", "de surcroît", "à cet égard", "en somme"
 - Évite les formulations génériques comme "dans un monde où...", "à l'heure où..."
-- Préfère les phrases courtes et directes aux phrases longues avec beaucoup de subordonnées
-- Varie la structure des phrases : commence parfois par le sujet, parfois par un complément, parfois par un verbe
+- Préfère les phrases courtes et directes
+- Varie la structure des phrases
 - Écris comme un vrai journaliste humain, pas comme un assistant IA
+- Ton : informé, accessible, légèrement enthousiaste sans en faire trop
+- Longueur : 800-1200 mots environ
 
 Réponds UNIQUEMENT avec le contenu Markdown de l'article, rien d'autre."""
 
@@ -192,8 +189,7 @@ Réponds UNIQUEMENT avec le contenu Markdown de l'article, rien d'autre."""
 
 
 def fact_check_and_verify_links(client, theme, article_content):
-    """Étape 3 : Fact-checking et vérification des liens via Perplexity.
-    Perplexity peut vérifier les URLs et les faits grâce à son accès web."""
+    """Étape 3 : Fact-checking et vérification des liens via Perplexity."""
     prompt = f"""Tu es un vérificateur de faits spécialisé en {theme['name']}.
 
 Voici un article de blog à vérifier :
@@ -214,10 +210,11 @@ MISSIONS :
    - Si tu ne trouves pas de bon lien de remplacement, remplace par un lien vers un article pertinent du même média ou d'un média fiable
    - CHAQUE lien dans l'article final doit pointer vers une page web qui existe réellement
 
-3. NETTOYAGE DU STYLE (ANTI-IA) :
-   - Remplace TOUS les tirets cadratins (—) et demi-cadratins (–) utilisés comme incises par des virgules, parenthèses ou reformulations
+3. NETTOYAGE DU STYLE :
+   - Remplace TOUS les tirets cadratins et demi-cadratins par des virgules, parenthèses ou reformulations
    - Supprime les tournures typiques de l'IA : "il est important de noter", "il convient de souligner", "force est de constater", "en effet", "par ailleurs", "en outre", "de surcroît"
    - Remplace les formulations pompeuses par des phrases simples et directes
+   - Supprime TOUS les emojis s'il en reste
    - Le texte doit sembler écrit par un journaliste humain
 
 4. QUALITÉ ÉDITORIALE :
@@ -231,7 +228,8 @@ RÈGLES :
 - Garde une longueur similaire (800-1200 mots)
 - Chaque section ## doit contenir au moins 1 lien source vérifié
 - Les liens doivent être intégrés naturellement dans le texte
-- AUCUN tiret cadratin (—) ni demi-cadratin (–) dans le texte final
+- AUCUN tiret cadratin ni demi-cadratin dans le texte final
+- AUCUN emoji dans le texte final
 
 Réponds UNIQUEMENT avec l'article final corrigé en Markdown, rien d'autre."""
 
@@ -244,7 +242,8 @@ def generate_title(client, theme, article_content):
 Le titre doit :
 - Être optimiste et donner envie de lire
 - Contenir le mot-clé principal du sujet pour le SEO
-- Ne PAS contenir de tiret cadratin (—) ni de tiret demi-cadratin (–)
+- Ne PAS contenir de tiret cadratin ni de tiret demi-cadratin
+- Ne PAS contenir d'emoji
 - Ne PAS être entouré de guillemets
 
 Début de l'article :
@@ -262,7 +261,8 @@ def generate_summary(client, article_content):
 La description doit :
 - Donner envie de cliquer depuis les résultats Google
 - Contenir les mots-clés principaux de l'article
-- Ne PAS contenir de tiret cadratin (—) ni de tiret demi-cadratin (–)
+- Ne PAS contenir de tiret cadratin ni de tiret demi-cadratin
+- Ne PAS contenir d'emoji
 
 Article :
 {article_content[:1000]}
@@ -295,6 +295,13 @@ def clean_ai_patterns(text):
     text = text.replace(" – ", ", ")
     text = text.replace("—", ", ")
     text = text.replace("–", ", ")
+    # Supprimer les emojis courants dans les titres
+    text = re.sub(
+        r'[\U0001F300-\U0001F9FF\U00002702-\U000027B0\U0000FE00-\U0000FE0F'
+        r'\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002600-\U000026FF'
+        r'\U0000200D\U00002B50]+',
+        '', text
+    )
     return text
 
 
@@ -313,7 +320,6 @@ def create_markdown_file(today, theme, title, summary, tags, content):
     slug = f"{date_str}-{day_name}-{theme['slug']}"
 
     tags_str = json.dumps(tags, ensure_ascii=False)
-    # Échapper les guillemets dans le titre et le résumé pour le front matter YAML
     safe_title = title.replace('"', '\\"')
     safe_summary = summary.replace('"', '\\"')
     front_matter = f"""---
@@ -321,9 +327,9 @@ title: "{safe_title}"
 date: {date_str}T12:00:00+01:00
 draft: false
 description: "{safe_summary}"
+author: "Nova"
 categories: ["{theme['name']}"]
 tags: {tags_str}
-emoji: "{theme['emoji']}"
 summary: "{safe_summary}"
 sources_verified: true
 ---
@@ -349,43 +355,43 @@ def main():
 
     # Obtenir le thème du jour
     today, theme = get_today_theme()
-    print(f"📰 Génération de l'article du jour : {theme['emoji']} {theme['name']}")
-    print(f"📅 Date : {today.strftime('%A %d %B %Y')}")
+    print(f"[Nova] Generation article : {theme['name']}")
+    print(f"[Nova] Date : {today.strftime('%A %d %B %Y')}")
 
     # Étape 1 : Recherche d'actualités réelles via Perplexity
-    print(f"🔎 Recherche d'actualités via Perplexity ({MODEL_SEARCH})...")
+    print(f"[Nova] Recherche via Perplexity ({MODEL_SEARCH})...")
     research = search_news(client, today, theme)
     news_count = len(research.get("news", []))
-    print(f"   → {news_count} actualités trouvées")
+    print(f"[Nova] {news_count} actualites trouvees")
 
     if news_count == 0:
-        print("Erreur : aucune actualité trouvée.")
+        print("[Nova] Erreur : aucune actualite trouvee.")
         sys.exit(1)
 
     # Étape 2 : Rédaction de l'article par Claude Sonnet
-    print(f"✍️  Rédaction de l'article via Claude Sonnet ({MODEL_WRITER})...")
+    print(f"[Nova] Redaction via Claude Sonnet ({MODEL_WRITER})...")
     content = write_article(client, today, theme, research)
 
     # Étape 3 : Fact-checking et vérification des liens via Perplexity
-    print(f"🔍 Vérification des faits et des liens via Perplexity ({MODEL_CHECKER})...")
+    print(f"[Nova] Fact-checking via Perplexity ({MODEL_CHECKER})...")
     content = fact_check_and_verify_links(client, theme, content)
 
     # Étape 4 : Nettoyage des patterns IA résiduels
     content = clean_ai_patterns(content)
 
-    # Étape 5 : Titre, résumé, tags via Claude Haiku (rapide et économique)
-    print(f"📝 Génération du titre, résumé et tags via Claude Haiku ({MODEL_LIGHT})...")
+    # Étape 5 : Titre, résumé, tags via Claude Haiku
+    print(f"[Nova] Titre, resume, tags via Claude Haiku ({MODEL_LIGHT})...")
     title = clean_ai_patterns(generate_title(client, theme, content))
     summary = clean_ai_patterns(generate_summary(client, content))
     tags = extract_tags(client, theme, content)
 
     # Étape 6 : Créer le fichier
     filepath = create_markdown_file(today, theme, title, summary, tags, content)
-    print(f"✅ Article créé et vérifié : {filepath}")
-    print(f"   Titre : {title}")
-    print(f"   Catégorie : {theme['name']}")
-    print(f"   Tags : {', '.join(tags)}")
-    print(f"   Pipeline : {MODEL_SEARCH} → {MODEL_WRITER} → {MODEL_CHECKER} → {MODEL_LIGHT}")
+    print(f"[Nova] Article cree : {filepath}")
+    print(f"[Nova] Titre : {title}")
+    print(f"[Nova] Categorie : {theme['name']}")
+    print(f"[Nova] Tags : {', '.join(tags)}")
+    print(f"[Nova] Pipeline : {MODEL_SEARCH} > {MODEL_WRITER} > {MODEL_CHECKER} > {MODEL_LIGHT}")
 
     return filepath
 
