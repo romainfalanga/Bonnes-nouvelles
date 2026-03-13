@@ -1,11 +1,11 @@
 name: "Publication quotidienne - Bonnes Nouvelles"
 
 on:
-  schedule:
-    # 8h00 heure de Paris = 7h00 UTC (hiver CET) / 6h00 UTC (été CEST)
-    # On utilise 7h UTC pour couvrir l'heure d'hiver (8h Paris)
-    # En été, ça se déclenchera à 9h Paris, ce qui reste acceptable
-    - cron: "0 7 * * 1-5"
+  # schedule:
+  #   # 8h00 heure de Paris = 7h00 UTC (hiver CET) / 6h00 UTC (été CEST)
+  #   # On utilise 7h UTC pour couvrir l'heure d'hiver (8h Paris)
+  #   # En été, ça se déclenchera à 9h Paris, ce qui reste acceptable
+  #   - cron: "0 7 * * 1-5"
   workflow_dispatch:
     inputs:
       force_date:
