@@ -464,6 +464,55 @@ img {
   color: var(--color-text);
 }
 
+/* Sources section (after <hr>) */
+.article-content hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 48px 0 32px;
+}
+
+.article-content hr + h2 {
+  font-size: 1.25rem;
+  color: var(--color-text-light);
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.article-content hr + h2 + ul,
+.article-content hr + h2 + p + ul {
+  list-style: none;
+  padding: 0;
+}
+
+.article-content hr + h2 + ul li,
+.article-content hr + h2 + p + ul li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.article-content hr + h2 + ul li:last-child,
+.article-content hr + h2 + p + ul li:last-child {
+  border-bottom: none;
+}
+
+.article-content hr + h2 + ul li a,
+.article-content hr + h2 + p + ul li a {
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-border);
+  transition: all var(--transition);
+}
+
+.article-content hr + h2 + ul li a:hover,
+.article-content hr + h2 + p + ul li a:hover {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
 /* Article Footer */
 .article-footer {
   padding: 32px 0 60px;
