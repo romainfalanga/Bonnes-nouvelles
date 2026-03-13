@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
-Script de génération automatique d'articles pour Bonnes Nouvelles.
-Pipeline multi-IA via l'API Mammouth :
-  - Perplexity (sonar-pro) : recherche d'actualités réelles + fact-checking
-  - Claude Sonnet : rédaction de l'article (persona Nova)
-  - Claude Haiku : titre, résumé, tags (tâches légères)
+Bonnes Nouvelles - Pipeline de génération d'articles v3.0
 
-Thèmes par jour :
-  - Lundi : Intelligence Artificielle
-  - Mardi : Médecine et Santé
-  - Mercredi : Physique et Univers
-  - Jeudi : Invention
-  - Vendredi : Écologie
+Pipeline multi-IA via l'API Mammouth :
+  1. Recherche approfondie (Perplexity sonar-pro) : actualités réelles des 7 derniers jours
+  2. Recherche complémentaire (Perplexity sonar-pro) : approfondissement de chaque actualité
+  3. Rédaction longue (Claude Sonnet) : article structuré 1500-2500 mots, angle éditorial par thème
+  4. Fact-checking et vérification des liens (Perplexity sonar-pro)
+  5. Compilation des sources vérifiées (Claude Sonnet)
+  6. SEO : titre, meta description, tags (Claude Haiku)
+
+Thèmes hebdomadaires :
+  - Lundi    : Intelligence Artificielle — nouvelles IA, capacités inédites
+  - Mardi    : Médecine et Santé — longévité, traitements, conditions de vie
+  - Mercredi : Physique et Univers — découvertes, compréhension de l'univers
+  - Jeudi    : Invention — inventions physiques améliorant la vie humaine
+  - Vendredi : Écologie — outils et idées pour vivre en harmonie avec la nature
 """
 
 import os
@@ -29,8 +33,8 @@ TIMEZONE = zoneinfo.ZoneInfo("Europe/Paris")
 
 # Modèles spécialisés par tâche
 MODEL_SEARCH = "sonar-pro"          # Perplexity : accès web, recherche d'actualités
-MODEL_WRITER = "claude-sonnet-4-6"  # Claude Sonnet : rédaction en français
-MODEL_CHECKER = "sonar-pro"         # Perplexity : vérification des faits + liens
+MODEL_WRITER = "claude-sonnet-4-6"  # Claude Sonnet : rédaction longue en français
+MODEL_CHECKER = "sonar-pro"         # Perplexity : fact-checking + vérification des liens
 MODEL_LIGHT = "claude-haiku-4-5"    # Claude Haiku : titre, résumé, tags
 
 # Configuration des thèmes par jour de la semaine (0=lundi, 4=vendredi)
@@ -38,34 +42,106 @@ THEMES = {
     0: {
         "name": "Intelligence Artificielle",
         "slug": "intelligence-artificielle",
-        "search_terms": "bonnes nouvelles intelligence artificielle IA découverte avancée",
         "description": "Les avancées positives dans le monde de l'IA",
+        "search_queries": [
+            "new AI models released this week breakthroughs capabilities",
+            "nouvelles IA intelligence artificielle avancée semaine",
+            "AI breakthrough new capabilities not possible before 2026",
+        ],
+        "editorial_angle": """ANGLE ÉDITORIAL — Intelligence Artificielle :
+Tu couvres les NOUVELLES IA et les NOUVELLES CAPACITÉS rendues possibles par l'IA cette semaine.
+Ce qui intéresse le lecteur :
+- Les nouveaux modèles d'IA sortis cette semaine et ce qu'ils permettent de faire de nouveau
+- Les applications concrètes de l'IA qui n'étaient pas possibles avant (médecine, science, créativité, productivité)
+- Les outils IA accessibles au grand public qui changent la donne
+- Les percées techniques majeures (raisonnement, multimodalité, agents autonomes)
+- Les records battus, les benchmarks dépassés, les limites repoussées
+Montre au lecteur CE QUI EST NOUVEAU et POURQUOI C'EST IMPORTANT pour sa vie quotidienne ou pour l'avenir.""",
     },
     1: {
         "name": "Médecine et Santé",
         "slug": "medecine-et-sante",
-        "search_terms": "bonnes nouvelles médecine santé découverte médicale traitement",
         "description": "Les découvertes médicales et avancées en santé",
+        "search_queries": [
+            "medical breakthrough treatment discovery this week 2026",
+            "découverte médicale traitement santé avancée semaine 2026",
+            "longevity health anti-aging breakthrough new treatment approved",
+        ],
+        "editorial_angle": """ANGLE ÉDITORIAL — Médecine et Santé :
+Tu couvres les AVANCÉES MÉDICALES qui permettent à l'être humain de vivre plus longtemps et en meilleure santé.
+Ce qui intéresse le lecteur :
+- Les nouveaux traitements approuvés ou en phase avancée d'essais cliniques
+- Les découvertes sur la longévité, le vieillissement et la régénération cellulaire
+- Les technologies médicales qui améliorent le diagnostic ou le traitement
+- Les avancées en thérapie génique, immunothérapie, médecine personnalisée
+- Les percées contre les maladies majeures (cancer, Alzheimer, maladies cardiaques, diabète)
+- Les innovations qui rendent les soins plus accessibles ou moins invasifs
+Montre au lecteur les PROGRÈS CONCRETS qui sauvent des vies et allongent l'espérance de vie en bonne santé.""",
     },
     2: {
         "name": "Physique et Univers",
         "slug": "physique-et-univers",
-        "search_terms": "bonnes nouvelles physique astronomie univers espace sciences",
         "description": "Les découvertes fascinantes en physique et astronomie",
+        "search_queries": [
+            "physics discovery universe space astronomy breakthrough 2026",
+            "découverte physique univers astronomie espace semaine 2026",
+            "quantum physics cosmology new discovery exoplanet telescope",
+        ],
+        "editorial_angle": """ANGLE ÉDITORIAL — Physique et Univers :
+Tu couvres les DÉCOUVERTES en physique fondamentale et dans l'exploration de l'univers.
+Ce qui intéresse le lecteur :
+- Les nouvelles découvertes qui changent notre compréhension de l'univers
+- Les observations astronomiques majeures (exoplanètes, trous noirs, ondes gravitationnelles)
+- Les avancées en physique quantique, physique des particules, matière noire
+- Les missions spatiales en cours et leurs résultats (JWST, Mars, astéroïdes)
+- Les théories confirmées ou réfutées par de nouvelles données
+- Les technologies qui repoussent les limites de l'observation et de l'expérimentation
+Montre au lecteur à quel point notre COMPRÉHENSION DE L'UNIVERS progresse et ce que ça signifie.""",
     },
     3: {
         "name": "Invention",
         "slug": "invention",
-        "search_terms": "invention innovation technologie brevet découverte",
         "description": "Les inventions qui changent le monde",
+        "search_queries": [
+            "new invention technology innovation improve life 2026",
+            "invention innovation technologie améliorer vie quotidienne 2026",
+            "breakthrough invention patent prototype new device solution",
+        ],
+        "editorial_angle": """ANGLE ÉDITORIAL — Inventions :
+Tu couvres les INVENTIONS PHYSIQUES et TECHNOLOGIQUES qui améliorent concrètement la vie des gens.
+Ce qui intéresse le lecteur :
+- Les nouvelles inventions physiques (appareils, dispositifs, matériaux, prototypes)
+- Les innovations qui résolvent des problèmes concrets du quotidien
+- Les technologies qui améliorent l'accessibilité pour les personnes handicapées
+- Les inventions qui rendent l'eau potable, l'énergie ou la nourriture plus accessibles
+- Les prototypes et brevets qui pourraient transformer un secteur entier
+- Les solutions low-tech ou high-tech ingénieuses qui améliorent les conditions de vie
+PAS de logiciels ni d'IA ici. On parle d'inventions PHYSIQUES, tangibles, concrètes.""",
     },
     4: {
         "name": "Écologie",
         "slug": "ecologie",
-        "search_terms": "bonnes nouvelles écologie environnement climat biodiversité",
         "description": "Les avancées positives pour notre planète",
+        "search_queries": [
+            "ecology environment positive news climate solution 2026",
+            "écologie environnement bonne nouvelle climat biodiversité 2026",
+            "renewable energy biodiversity conservation breakthrough green technology",
+        ],
+        "editorial_angle": """ANGLE ÉDITORIAL — Écologie :
+Tu couvres les OUTILS, IDÉES et AVANCÉES qui permettent de vivre en harmonie avec la nature.
+Ce qui intéresse le lecteur :
+- Les technologies vertes qui deviennent accessibles et pratiques au quotidien
+- Les initiatives de restauration des écosystèmes et de la biodiversité
+- Les solutions concrètes pour réduire son empreinte carbone facilement
+- Les politiques environnementales qui fonctionnent et leurs résultats mesurables
+- Les innovations en énergie renouvelable, recyclage, agriculture durable
+- Les projets de reforestation, dépollution, protection des espèces
+Montre au lecteur des SOLUTIONS PRATIQUES et des RÉSULTATS POSITIFS, pas du catastrophisme.""",
     },
 }
+
+# Jours en français
+WEEKDAY_NAMES = {0: "lundi", 1: "mardi", 2: "mercredi", 3: "jeudi", 4: "vendredi"}
 
 
 def get_client():
@@ -76,11 +152,12 @@ def get_client():
     )
 
 
-def chat(client, model, messages, max_tokens):
+def chat(client, model, messages, max_tokens, temperature=0.7):
     """Appel générique à l'API Mammouth avec un modèle spécifique."""
     response = client.chat.completions.create(
         model=model,
         max_tokens=max_tokens,
+        temperature=temperature,
         messages=messages,
     )
     return response.choices[0].message.content
@@ -102,285 +179,447 @@ def get_today_theme():
         today = datetime.datetime.now(TIMEZONE).date()
         print(f"[Nova] Date du jour (Europe/Paris) : {today}")
 
-    weekday = today.weekday()  # 0=lundi, 6=dimanche
+    weekday = today.weekday()
 
-    if weekday > 4:  # Week-end
+    if weekday > 4:
         print("[Nova] Pas de publication le week-end.")
         sys.exit(0)
 
     return today, THEMES[weekday]
 
 
+def extract_json(text):
+    """Extrait le premier objet JSON valide d'un texte."""
+    json_match = re.search(r'\{[\s\S]*\}', text)
+    if json_match:
+        try:
+            return json.loads(json_match.group())
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
 def search_news(client, today, theme):
-    """Étape 1 : Recherche d'actualités réelles via Perplexity (sonar-pro).
-    Perplexity a un accès web natif et retourne des infos vérifiées avec sources."""
+    """Étape 1 : Recherche large d'actualités réelles via Perplexity.
+    Effectue plusieurs recherches avec des termes différents pour maximiser la couverture."""
     date_from = today - datetime.timedelta(days=7)
     date_from_fr = date_from.strftime("%d/%m/%Y")
     date_to_fr = today.strftime("%d/%m/%Y")
     date_from_iso = date_from.isoformat()
     date_to_iso = today.isoformat()
 
-    prompt = f"""Recherche les bonnes nouvelles et actualités positives RÉELLES et RÉCENTES
-dans le domaine "{theme['name']}".
+    all_news = []
+
+    for i, query in enumerate(theme["search_queries"]):
+        print(f"[Nova] Recherche {i+1}/{len(theme['search_queries'])} : {query[:60]}...")
+
+        prompt = f"""Nous sommes le {date_to_fr} ({date_to_iso}).
+
+Recherche des actualités positives et des avancées RÉELLES dans le domaine "{theme['name']}".
 
 PÉRIODE STRICTE : du {date_from_fr} au {date_to_fr} (soit du {date_from_iso} au {date_to_iso}).
-IMPORTANT : ne retourne QUE des actualités publiées entre ces deux dates. Ignore tout article plus ancien.
+NE RETOURNE QUE des informations publiées dans cette fenêtre de 7 jours. RIEN de plus ancien.
 
-Termes de recherche : {theme['search_terms']}
+Requête de recherche : {query}
 
 INSTRUCTIONS :
-1. Trouve 3 à 5 actualités positives RÉELLES et VÉRIFIÉES publiées entre le {date_from_fr} et le {date_to_fr}
+1. Trouve 3 à 5 actualités positives RÉELLES publiées entre le {date_from_iso} et le {date_to_iso}
 2. Pour CHAQUE actualité, fournis :
-   - Un titre descriptif
-   - Un résumé de 3-4 phrases avec des faits précis (chiffres, noms, dates, lieux)
-   - La DATE DE PUBLICATION de l'article source (format YYYY-MM-DD)
-   - L'URL source EXACTE de l'article original (pas une URL inventée)
-   - Le nom du média ou de l'institution source
-3. Privilégie les sources francophones quand elles existent, sinon utilise des sources internationales fiables
-4. REJETTE toute actualité dont la date de publication est antérieure au {date_from_fr}
+   - title : titre descriptif et factuel
+   - summary : résumé détaillé de 4-6 phrases avec des FAITS PRÉCIS (chiffres, noms complets, institutions, dates, lieux)
+   - published_date : date de publication au format YYYY-MM-DD
+   - source_url : URL EXACTE de l'article source original
+   - source_name : nom du média ou de l'institution
+   - key_facts : liste de 3-5 faits clés vérifiables (chiffres, noms, données)
+   - why_important : pourquoi c'est significatif, en 2-3 phrases
+3. Privilégie les sources fiables : médias reconnus, revues scientifiques, institutions
+4. Si une source francophone existe, inclus-la. Sinon, utilise des sources internationales
 
-FORMAT DE RÉPONSE (JSON) :
+FORMAT JSON :
 {{
   "news": [
     {{
-      "title": "Titre de la nouvelle",
-      "summary": "Résumé avec faits précis...",
+      "title": "...",
+      "summary": "...",
       "published_date": "YYYY-MM-DD",
       "source_url": "https://...",
-      "source_name": "Nom du média",
-      "why_good_news": "Pourquoi c'est une bonne nouvelle"
+      "source_name": "...",
+      "key_facts": ["fait 1", "fait 2", "fait 3"],
+      "why_important": "..."
     }}
   ]
 }}
 
-Réponds UNIQUEMENT avec le JSON, rien d'autre."""
+Réponds UNIQUEMENT avec le JSON."""
 
-    result = chat(client, MODEL_SEARCH, [{"role": "user", "content": prompt}], max_tokens=4096)
+        result = chat(client, MODEL_SEARCH, [{"role": "user", "content": prompt}], max_tokens=4096, temperature=0.3)
+        data = extract_json(result)
 
-    # Extraire le JSON de la réponse
-    json_match = re.search(r'\{[\s\S]*\}', result)
-    if json_match:
-        data = json.loads(json_match.group())
-        # Filtrer les actualités hors période
-        filtered_news = []
-        for news in data.get("news", []):
-            pub_date_str = news.get("published_date", "")
-            if pub_date_str:
-                try:
-                    pub_date = datetime.date.fromisoformat(pub_date_str)
-                    if pub_date < date_from:
-                        print(f"[Nova] Actualite ignoree (trop ancienne : {pub_date}) : {news.get('title', '?')}")
-                        continue
-                except ValueError:
-                    pass
-            filtered_news.append(news)
-        data["news"] = filtered_news
-        return data
-    return {"news": []}
+        if data:
+            for news in data.get("news", []):
+                # Filtrer les articles hors période
+                pub_date_str = news.get("published_date", "")
+                if pub_date_str:
+                    try:
+                        pub_date = datetime.date.fromisoformat(pub_date_str)
+                        if pub_date < date_from:
+                            print(f"[Nova]   Ignoree (date {pub_date} < {date_from}) : {news.get('title', '?')[:60]}")
+                            continue
+                    except ValueError:
+                        pass
+                all_news.append(news)
+
+    # Dédoublonner par titre (similitude approximative)
+    seen_titles = set()
+    unique_news = []
+    for news in all_news:
+        title_key = news.get("title", "").lower().strip()[:50]
+        if title_key not in seen_titles:
+            seen_titles.add(title_key)
+            unique_news.append(news)
+
+    return {"news": unique_news}
 
 
-def write_article(client, today, theme, research_data):
-    """Étape 2 : Rédaction de l'article par Claude Sonnet (persona Nova)."""
-    date_from = (today - datetime.timedelta(days=7)).strftime("%d/%m/%Y")
-    date_to = today.strftime("%d/%m/%Y")
+def deepen_research(client, today, theme, news_items):
+    """Étape 2 : Approfondissement de chaque actualité via Perplexity.
+    Pour chaque nouvelle trouvée, récupère plus de contexte, chiffres et détails."""
+    date_to_fr = today.strftime("%d/%m/%Y")
+    date_to_iso = today.isoformat()
 
-    news_count = len(research_data["news"])
-    news_text = json.dumps(research_data["news"], ensure_ascii=False, indent=2)
+    titles = "\n".join(f"- {n.get('title', '?')}" for n in news_items)
+    summaries = "\n\n".join(
+        f"### {n.get('title', '?')}\n{n.get('summary', '')}\nSource : {n.get('source_name', '?')} ({n.get('source_url', '')})"
+        for n in news_items
+    )
 
-    prompt = f"""Tu es Nova, chroniqueuse IA du blog "Bonnes Nouvelles". Ta mission : documenter les progrès de l'humanité dans le domaine "{theme['name']}".
+    prompt = f"""Nous sommes le {date_to_fr} ({date_to_iso}).
 
-Écris un article en français basé sur les {news_count} actualités RÉELLES ci-dessous, couvrant la semaine du {date_from} au {date_to}.
+Voici {len(news_items)} actualités récentes dans le domaine "{theme['name']}" que je dois approfondir :
 
-ACTUALITÉS VÉRIFIÉES À UTILISER :
+{summaries}
+
+Pour CHACUNE de ces actualités, je veux que tu recherches des INFORMATIONS COMPLÉMENTAIRES :
+
+1. CONTEXTE : Quel est le contexte plus large ? Quels travaux ou événements précédents ont mené à cette avancée ?
+2. DÉTAILS TECHNIQUES : Chiffres précis, données quantitatives, méthodologie, résultats mesurables
+3. IMPACT CONCRET : Qui est directement impacté ? Combien de personnes ? Quel changement concret ?
+4. EXPERTS : Citations ou réactions d'experts du domaine, si disponibles
+5. PERSPECTIVE : Quelles sont les prochaines étapes prévues ? Calendrier ?
+6. SOURCES ADDITIONNELLES : D'autres articles ou sources qui couvrent le même sujet
+
+FORMAT JSON :
+{{
+  "enrichments": [
+    {{
+      "original_title": "titre original de la nouvelle",
+      "context": "contexte élargi en 3-4 phrases",
+      "technical_details": "détails techniques, chiffres, données",
+      "concrete_impact": "impact concret sur les gens",
+      "expert_quotes": "citations d'experts si disponibles",
+      "next_steps": "prochaines étapes et calendrier",
+      "additional_sources": [
+        {{"url": "https://...", "name": "Nom du média", "title": "Titre de l'article"}}
+      ]
+    }}
+  ]
+}}
+
+Réponds UNIQUEMENT avec le JSON."""
+
+    result = chat(client, MODEL_SEARCH, [{"role": "user", "content": prompt}], max_tokens=6000, temperature=0.3)
+    data = extract_json(result)
+
+    if data and "enrichments" in data:
+        # Fusionner les enrichissements avec les news originales
+        enrichments_by_title = {}
+        for e in data["enrichments"]:
+            key = e.get("original_title", "").lower().strip()[:50]
+            enrichments_by_title[key] = e
+
+        for news in news_items:
+            key = news.get("title", "").lower().strip()[:50]
+            if key in enrichments_by_title:
+                news["enrichment"] = enrichments_by_title[key]
+
+    return news_items
+
+
+def write_article(client, today, theme, enriched_news):
+    """Étape 3 : Rédaction de l'article approfondi par Claude Sonnet."""
+    date_from = today - datetime.timedelta(days=7)
+    date_from_fr = date_from.strftime("%d/%m/%Y")
+    date_to_fr = today.strftime("%d/%m/%Y")
+
+    news_text = json.dumps(enriched_news, ensure_ascii=False, indent=2)
+
+    system_prompt = f"""Tu es Nova, chroniqueuse IA du blog "Bonnes Nouvelles".
+Tu écris des articles de fond, approfondis et bien documentés sur les avancées positives de l'humanité.
+Ton style est celui d'une journaliste scientifique expérimentée : précise, accessible, engageante.
+Tu écris en français impeccable. Tu ne ressembles pas à un assistant IA.
+
+{theme['editorial_angle']}
+
+RÈGLES DE STYLE ABSOLUES :
+- AUCUN emoji nulle part, jamais
+- JAMAIS de tiret cadratin ni de tiret demi-cadratin pour faire des incises
+- JAMAIS ces expressions : "il est important de noter", "il convient de souligner", "force est de constater", "en effet", "par ailleurs", "en outre", "de surcroît", "à cet égard", "en somme", "il est intéressant de", "notons que", "soulignons que", "dans un monde où", "à l'heure où"
+- Phrases courtes et directes, variées dans leur structure
+- Ton : informé, accessible, enthousiaste sans excès, crédible"""
+
+    user_prompt = f"""Écris un article approfondi couvrant la semaine du {date_from_fr} au {date_to_fr} dans le domaine "{theme['name']}".
+
+Voici les {len(enriched_news)} actualités vérifiées avec leurs enrichissements :
 {news_text}
 
-STRUCTURE OBLIGATOIRE DE L'ARTICLE :
+STRUCTURE OBLIGATOIRE :
 
-1. INTRODUCTION (un paragraphe) :
-   - Résume en 3-4 phrases les sujets qui seront abordés dans l'article
-   - Donne au lecteur une vue d'ensemble de ce qu'il va découvrir
-   - Mentionne brièvement chaque nouvelle pour donner envie de lire la suite
-   - Exemple de structure : "Cette semaine en [domaine], [résumé nouvelle 1], [résumé nouvelle 2] et [résumé nouvelle 3]. Voici le détail de ces avancées."
+1. INTRODUCTION (2-3 paragraphes, 150-250 mots) :
+   - Premier paragraphe : accroche forte qui donne le ton de la semaine, un fait marquant ou une tendance
+   - Deuxième paragraphe : présentation de CHAQUE sujet qui sera développé dans l'article, en une phrase chacun
+   - Troisième paragraphe (optionnel) : mise en perspective, pourquoi cette semaine est significative
+   - Le lecteur doit savoir exactement ce qu'il va lire et avoir envie de continuer
 
-2. SECTIONS (une par nouvelle) :
-   - Titre ## en texte brut, accrocheur et optimisé SEO (mot-clé principal inclus)
-   - AUCUN emoji dans les titres ni dans le texte
-   - 2-3 paragraphes avec les détails concrets des sources
-   - Pour chaque fait, intègre un lien hypertexte vers la source : [texte](URL)
-   - Explique clairement POURQUOI c'est une bonne nouvelle et CE QUE ÇA CHANGE
+2. SECTIONS DÉTAILLÉES (une par actualité, chacune avec un titre ##) :
+   - Titre ## : informatif, contenant le mot-clé principal, optimisé SEO, SANS emoji
+   - Paragraphe 1 : le fait principal avec les données clés (qui, quoi, où, quand, combien)
+   - Paragraphe 2 : le contexte et les détails techniques accessibles au grand public
+   - Paragraphe 3 : l'impact concret, ce que ça change pour les gens, les perspectives
+   - Intègre les liens vers les sources directement dans le texte : [texte descriptif](URL)
+   - Chaque section doit faire 200-400 mots minimum
 
-3. CONCLUSION (un paragraphe) :
-   - Synthèse des tendances positives de la semaine
+3. CONCLUSION "Ce qu'il faut retenir" (1-2 paragraphes) :
+   - Synthèse des tendances de la semaine
+   - Mise en perspective : qu'est-ce que ces avancées signifient ensemble ?
+   - Ouverture sur ce qui est à surveiller dans les semaines à venir
 
-STYLE D'ÉCRITURE OBLIGATOIRE :
-- AUCUN emoji nulle part dans l'article
-- N'utilise JAMAIS le tiret cadratin ou le tiret demi-cadratin pour faire des incises
-- N'utilise JAMAIS "il est important de noter que", "il convient de souligner", "force est de constater"
-- N'utilise JAMAIS "en effet", "par ailleurs", "en outre", "de surcroît", "à cet égard", "en somme"
-- Évite les formulations génériques comme "dans un monde où...", "à l'heure où..."
-- Préfère les phrases courtes et directes
-- Varie la structure des phrases
-- Écris comme un vrai journaliste humain, pas comme un assistant IA
-- Ton : informé, accessible, légèrement enthousiaste sans en faire trop
-- Longueur : 800-1200 mots environ
+LONGUEUR TOTALE : 1500 à 2500 mots. Sois généreux en détails et en analyse.
 
-Réponds UNIQUEMENT avec le contenu Markdown de l'article, rien d'autre."""
+NE COMMENCE PAS par un titre # principal. Commence directement par l'introduction.
+NE METS PAS de section "Sources" à la fin, elle sera ajoutée automatiquement.
 
-    return chat(client, MODEL_WRITER, [{"role": "user", "content": prompt}], max_tokens=4096)
+Réponds UNIQUEMENT avec le contenu Markdown de l'article."""
+
+    return chat(
+        client, MODEL_WRITER,
+        [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        max_tokens=8000, temperature=0.7
+    )
 
 
-def fact_check_and_verify_links(client, theme, article_content):
-    """Étape 3 : Fact-checking et vérification des liens via Perplexity."""
-    prompt = f"""Tu es un vérificateur de faits spécialisé en {theme['name']}.
+def fact_check_article(client, theme, article_content):
+    """Étape 4 : Fact-checking approfondi et vérification des liens via Perplexity."""
+    prompt = f"""Tu es un vérificateur de faits senior spécialisé en {theme['name']}.
 
-Voici un article de blog à vérifier :
+Voici un article de blog à vérifier rigoureusement :
 ---
 {article_content}
 ---
 
-MISSIONS :
+VÉRIFICATION EN 4 POINTS :
 
-1. VÉRIFICATION DES FAITS :
-   - Vérifie chaque fait, chiffre et affirmation dans l'article via une recherche web
-   - Si un fait est inexact, corrige-le avec les bonnes informations
-   - Si un fait ne peut pas être confirmé, reformule avec des termes nuancés
+1. FAITS ET CHIFFRES :
+   - Vérifie CHAQUE fait, chiffre, nom et affirmation via une recherche web
+   - Si un fait est inexact, corrige-le avec les bonnes informations et la bonne source
+   - Si un fait ne peut pas être confirmé, nuance la formulation ("selon...", "d'après...")
+   - Vérifie les noms des chercheurs, institutions, dates de publication
 
-2. VÉRIFICATION DES LIENS :
-   - Vérifie que chaque URL dans l'article mène bien à un contenu existant et pertinent
-   - Si une URL est cassée ou ne correspond pas au contenu mentionné, remplace-la par la bonne URL trouvée via recherche web
-   - Si tu ne trouves pas de bon lien de remplacement, remplace par un lien vers un article pertinent du même média ou d'un média fiable
-   - CHAQUE lien dans l'article final doit pointer vers une page web qui existe réellement
+2. LIENS ET URLS :
+   - Vérifie que CHAQUE URL dans l'article mène vers une page existante et pertinente
+   - Si une URL est cassée ou incorrecte, remplace-la par l'URL correcte trouvée via recherche
+   - Si tu ne trouves pas l'URL exacte, remplace par un article fiable sur le même sujet
+   - CHAQUE lien doit fonctionner et pointer vers du contenu en rapport avec le texte
 
-3. NETTOYAGE DU STYLE :
-   - Remplace TOUS les tirets cadratins et demi-cadratins par des virgules, parenthèses ou reformulations
-   - Supprime les tournures typiques de l'IA : "il est important de noter", "il convient de souligner", "force est de constater", "en effet", "par ailleurs", "en outre", "de surcroît"
-   - Remplace les formulations pompeuses par des phrases simples et directes
-   - Supprime TOUS les emojis s'il en reste
-   - Le texte doit sembler écrit par un journaliste humain
+3. COHÉRENCE :
+   - Vérifie que les dates mentionnées sont cohérentes
+   - Vérifie que les chiffres sont dans le bon ordre de grandeur
+   - Vérifie que les attributions (qui a dit/fait quoi) sont correctes
 
-4. QUALITÉ ÉDITORIALE :
-   - Peaufine le style pour qu'il soit fluide et engageant
-   - Assure-toi que les transitions entre sections sont naturelles
-   - Garde le ton optimiste mais crédible
+4. NETTOYAGE FINAL :
+   - Remplace TOUS les tirets cadratins et demi-cadratins par des virgules ou reformulations
+   - Supprime les tournures IA résiduelles
+   - Supprime les emojis s'il en reste
+   - Assure des transitions naturelles entre sections
 
 RÈGLES :
-- Conserve la structure Markdown (## pour les titres)
-- Ne commence PAS par un titre principal (pas de # en début)
-- Garde une longueur similaire (800-1200 mots)
-- Chaque section ## doit contenir au moins 1 lien source vérifié
-- Les liens doivent être intégrés naturellement dans le texte
-- AUCUN tiret cadratin ni demi-cadratin dans le texte final
-- AUCUN emoji dans le texte final
+- Conserve EXACTEMENT la même structure (titres ##, paragraphes)
+- Ne commence PAS par un titre # principal
+- Garde la même longueur (ne raccourcis pas)
+- Chaque section ## doit contenir au moins 2 liens sources vérifiés
+- Améliore la précision sans sacrifier la lisibilité
 
-Réponds UNIQUEMENT avec l'article final corrigé en Markdown, rien d'autre."""
+Réponds UNIQUEMENT avec l'article corrigé en Markdown."""
 
-    return chat(client, MODEL_CHECKER, [{"role": "user", "content": prompt}], max_tokens=5000)
+    return chat(client, MODEL_CHECKER, [{"role": "user", "content": prompt}], max_tokens=8000, temperature=0.1)
+
+
+def compile_sources(client, article_content, enriched_news):
+    """Étape 5 : Compilation et vérification finale des sources.
+    Extrait toutes les sources de l'article et les enrichissements pour créer
+    une section Sources propre et vérifiée."""
+    # Extraire les URLs de l'article
+    urls_in_article = re.findall(r'\[([^\]]+)\]\((https?://[^\)]+)\)', article_content)
+
+    # Collecter les sources des enrichissements
+    research_sources = []
+    for news in enriched_news:
+        if news.get("source_url"):
+            research_sources.append({
+                "url": news["source_url"],
+                "name": news.get("source_name", ""),
+                "title": news.get("title", ""),
+            })
+        enrichment = news.get("enrichment", {})
+        for src in enrichment.get("additional_sources", []):
+            if src.get("url"):
+                research_sources.append(src)
+
+    sources_text = json.dumps(research_sources, ensure_ascii=False, indent=2)
+    article_urls = "\n".join(f"- [{text}]({url})" for text, url in urls_in_article)
+
+    prompt = f"""Voici les sources utilisées dans un article et celles trouvées pendant la recherche.
+
+SOURCES DANS L'ARTICLE (liens hypertextes) :
+{article_urls if article_urls else "Aucun lien trouvé dans l'article"}
+
+SOURCES DE LA RECHERCHE :
+{sources_text}
+
+Génère une section "Sources" propre et organisée pour la fin de l'article.
+
+RÈGLES :
+1. Inclus UNIQUEMENT les sources qui ont réellement contribué au contenu de l'article
+2. Dédoublonne les URLs identiques
+3. Pour chaque source, utilise le format : - [Titre de l'article - Nom du média](URL)
+4. Classe les sources dans l'ordre d'apparition dans l'article
+5. Maximum 10 sources, minimum 3
+6. Ne mets PAS de titre ## ou ### avant la liste, juste les liens
+
+Réponds UNIQUEMENT avec la liste de sources au format Markdown."""
+
+    return chat(client, MODEL_WRITER, [{"role": "user", "content": prompt}], max_tokens=1000, temperature=0.2)
 
 
 def generate_title(client, theme, article_content):
-    """Génère un titre accrocheur via Claude Haiku."""
-    prompt = f"""Génère UN titre court et accrocheur (max 65 caractères) pour cet article de blog sur les bonnes nouvelles en {theme['name']}.
-Le titre doit :
-- Être optimiste et donner envie de lire
-- Contenir le mot-clé principal du sujet pour le SEO
-- Ne PAS contenir de tiret cadratin ni de tiret demi-cadratin
-- Ne PAS contenir d'emoji
-- Ne PAS être entouré de guillemets
+    """Génère un titre SEO optimisé via Claude Haiku."""
+    prompt = f"""Génère UN titre pour cet article de blog sur "{theme['name']}".
+
+CRITÈRES DU TITRE :
+- Maximum 65 caractères (pour le SEO Google)
+- Contient le mot-clé principal du domaine
+- Donne envie de cliquer
+- Informatif : le lecteur sait de quoi parle l'article
+- Optimiste sans être racoleur
+- PAS de tiret cadratin, pas d'emoji, pas de guillemets autour
 
 Début de l'article :
-{article_content[:500]}
+{article_content[:800]}
 
-Réponds UNIQUEMENT avec le titre, rien d'autre."""
+Réponds UNIQUEMENT avec le titre, sans guillemets, sans ponctuation finale."""
 
-    result = chat(client, MODEL_LIGHT, [{"role": "user", "content": prompt}], max_tokens=100)
-    return result.strip().strip('"').strip("«").strip("»").strip()
+    result = chat(client, MODEL_LIGHT, [{"role": "user", "content": prompt}], max_tokens=100, temperature=0.6)
+    title = result.strip().strip('"').strip("'").strip("\u00ab").strip("\u00bb").strip("*").strip()
+    # Supprimer un éventuel point final
+    if title.endswith("."):
+        title = title[:-1]
+    return title
 
 
-def generate_summary(client, article_content):
-    """Génère un résumé court via Claude Haiku."""
-    prompt = f"""Génère une meta description SEO de 1-2 phrases (entre 120 et 155 caractères) pour cet article.
-La description doit :
-- Donner envie de cliquer depuis les résultats Google
-- Contenir les mots-clés principaux de l'article
-- Ne PAS contenir de tiret cadratin ni de tiret demi-cadratin
-- Ne PAS contenir d'emoji
+def generate_meta_description(client, article_content):
+    """Génère une meta description SEO via Claude Haiku."""
+    prompt = f"""Génère une meta description SEO pour cet article de blog.
+
+CRITÈRES :
+- Entre 130 et 155 caractères exactement
+- Résume le contenu principal de l'article
+- Contient les mots-clés importants naturellement
+- Donne envie de cliquer depuis les résultats Google
+- PAS de tiret cadratin, pas d'emoji
+
+Article :
+{article_content[:1200]}
+
+Réponds UNIQUEMENT avec la meta description, rien d'autre."""
+
+    return chat(client, MODEL_LIGHT, [{"role": "user", "content": prompt}], max_tokens=200, temperature=0.5).strip()
+
+
+def extract_tags(client, theme, article_content):
+    """Extrait des tags SEO pertinents via Claude Haiku."""
+    prompt = f"""Génère 5 à 7 tags SEO pertinents pour cet article sur {theme['name']}.
+
+CRITÈRES :
+- En minuscules, sans #
+- Mélange de termes généraux (le domaine) et spécifiques (sujets de l'article)
+- Inclus le nom du domaine principal
+- Les tags doivent correspondre à des recherches que feraient les lecteurs
+- Séparés par des virgules
 
 Article :
 {article_content[:1000]}
 
-Réponds UNIQUEMENT avec la description, rien d'autre."""
-
-    return chat(client, MODEL_LIGHT, [{"role": "user", "content": prompt}], max_tokens=200).strip()
-
-
-def extract_tags(client, theme, article_content):
-    """Extrait des tags pertinents via Claude Haiku."""
-    prompt = f"""Génère 3-5 tags pertinents pour cet article sur {theme['name']}.
-Format : une liste de mots séparés par des virgules, en minuscules, sans #.
-Exemple : intelligence artificielle, santé, recherche
-
-Article :
-{article_content[:800]}
-
 Réponds UNIQUEMENT avec les tags séparés par des virgules."""
 
-    result = chat(client, MODEL_LIGHT, [{"role": "user", "content": prompt}], max_tokens=100)
-    tags = [tag.strip() for tag in result.strip().split(",")]
-    return tags
+    result = chat(client, MODEL_LIGHT, [{"role": "user", "content": prompt}], max_tokens=150, temperature=0.4)
+    tags = [tag.strip().lower() for tag in result.strip().split(",") if tag.strip()]
+    return tags[:7]
 
 
 def clean_ai_patterns(text):
     """Supprime les patterns typiques de texte généré par IA."""
-    # Remplacer les tirets cadratins et demi-cadratins par des virgules
-    text = text.replace(" — ", ", ")
-    text = text.replace(" – ", ", ")
-    text = text.replace("—", ", ")
-    text = text.replace("–", ", ")
-    # Supprimer les emojis courants dans les titres
+    # Remplacer les tirets cadratins et demi-cadratins
+    text = text.replace(" \u2014 ", ", ")
+    text = text.replace(" \u2013 ", ", ")
+    text = text.replace("\u2014", ", ")
+    text = text.replace("\u2013", ", ")
+    # Supprimer les emojis
     text = re.sub(
         '[\U0001F300-\U0001F9FF\U00002702-\U000027B0\U0000FE00-\U0000FE0F'
         '\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002600-\U000026FF'
         '\U0000200D\U00002B50]+',
         '', text
     )
+    # Supprimer les doubles espaces résiduels
+    text = re.sub(r'  +', ' ', text)
     return text
 
 
-def create_markdown_file(today, theme, title, summary, tags, content):
-    """Crée le fichier Markdown avec les métadonnées Hugo."""
+def create_markdown_file(today, theme, title, summary, tags, content, sources_section):
+    """Crée le fichier Markdown final avec front matter Hugo optimisé SEO."""
     date_str = today.strftime("%Y-%m-%d")
-    weekday_names = {
-        0: "lundi",
-        1: "mardi",
-        2: "mercredi",
-        3: "jeudi",
-        4: "vendredi",
-    }
-    day_name = weekday_names[today.weekday()]
-
+    day_name = WEEKDAY_NAMES[today.weekday()]
     slug = f"{date_str}-{day_name}-{theme['slug']}"
 
     tags_str = json.dumps(tags, ensure_ascii=False)
     safe_title = title.replace('"', '\\"')
     safe_summary = summary.replace('"', '\\"')
+
     front_matter = f"""---
 title: "{safe_title}"
-date: {date_str}T12:00:00+01:00
+date: {date_str}T08:00:00+01:00
 draft: false
+slug: "{slug}"
 description: "{safe_summary}"
+summary: "{safe_summary}"
 author: "Nova"
 categories: ["{theme['name']}"]
 tags: {tags_str}
-summary: "{safe_summary}"
 sources_verified: true
+seo_title: "{safe_title}"
 ---
 
 """
 
+    # Assembler le contenu final : article + sources
+    full_content = content.strip()
+    if sources_section:
+        full_content += "\n\n---\n\n## Sources\n\n" + sources_section.strip()
+
     filepath = f"content/posts/{slug}.md"
+    os.makedirs("content/posts", exist_ok=True)
 
     with open(filepath, "w", encoding="utf-8") as f:
-        f.write(front_matter + content)
+        f.write(front_matter + full_content + "\n")
 
     return filepath
 
@@ -388,59 +627,92 @@ sources_verified: true
 def main():
     # Vérifier la clé API
     if not os.environ.get("MAMMOUTH_API_KEY"):
-        print("Erreur : MAMMOUTH_API_KEY non définie.")
+        print("[Nova] Erreur : MAMMOUTH_API_KEY non definie.")
         sys.exit(1)
 
-    # Créer le client Mammouth
     client = get_client()
-
-    # Obtenir le thème du jour
     today, theme = get_today_theme()
-    print(f"[Nova] Generation article : {theme['name']}")
-    print(f"[Nova] Date : {today.strftime('%A %d %B %Y')}")
 
-    # Étape 1 : Recherche d'actualités réelles via Perplexity
-    print(f"[Nova] Recherche via Perplexity ({MODEL_SEARCH})...")
+    print(f"[Nova] === GENERATION ARTICLE ===")
+    print(f"[Nova] Theme : {theme['name']}")
+    print(f"[Nova] Date  : {today.isoformat()} ({WEEKDAY_NAMES[today.weekday()]})")
+    print(f"[Nova] Angle : {theme['description']}")
+    print()
+
+    # Étape 1 : Recherche large multi-requêtes
+    print(f"[Nova] ETAPE 1/6 - Recherche d'actualites ({MODEL_SEARCH})...")
     research = search_news(client, today, theme)
-    news_count = len(research.get("news", []))
-    print(f"[Nova] {news_count} actualites trouvees")
+    news_items = research.get("news", [])
+    print(f"[Nova] => {len(news_items)} actualites uniques trouvees")
 
-    if news_count == 0:
-        print("[Nova] Erreur : aucune actualite trouvee.")
+    if len(news_items) == 0:
+        print("[Nova] Erreur : aucune actualite trouvee apres recherche.")
         sys.exit(1)
 
-    # Étape 2 : Rédaction de l'article par Claude Sonnet
-    print(f"[Nova] Redaction via Claude Sonnet ({MODEL_WRITER})...")
-    content = write_article(client, today, theme, research)
+    # Limiter à 5 actualités max pour un article cohérent
+    news_items = news_items[:5]
+    print(f"[Nova] => {len(news_items)} actualites selectionnees pour l'article")
+    for n in news_items:
+        print(f"[Nova]   - {n.get('title', '?')[:80]}")
+    print()
 
-    # Étape 3 : Fact-checking et vérification des liens via Perplexity
-    print(f"[Nova] Fact-checking via Perplexity ({MODEL_CHECKER})...")
-    content = fact_check_and_verify_links(client, theme, content)
+    # Étape 2 : Approfondissement
+    print(f"[Nova] ETAPE 2/6 - Approfondissement ({MODEL_SEARCH})...")
+    enriched_news = deepen_research(client, today, theme, news_items)
+    enriched_count = sum(1 for n in enriched_news if "enrichment" in n)
+    print(f"[Nova] => {enriched_count}/{len(enriched_news)} actualites enrichies")
+    print()
 
-    # Étape 4 : Nettoyage des patterns IA résiduels
+    # Étape 3 : Rédaction
+    print(f"[Nova] ETAPE 3/6 - Redaction de l'article ({MODEL_WRITER})...")
+    content = write_article(client, today, theme, enriched_news)
+    word_count = len(content.split())
+    print(f"[Nova] => Article redige ({word_count} mots)")
+    print()
+
+    # Étape 4 : Fact-checking
+    print(f"[Nova] ETAPE 4/6 - Fact-checking et verification des liens ({MODEL_CHECKER})...")
+    content = fact_check_article(client, theme, content)
     content = clean_ai_patterns(content)
+    print(f"[Nova] => Article verifie et nettoye")
+    print()
 
-    # Étape 5 : Titre, résumé, tags via Claude Haiku
-    print(f"[Nova] Titre, resume, tags via Claude Haiku ({MODEL_LIGHT})...")
+    # Étape 5 : Compilation des sources
+    print(f"[Nova] ETAPE 5/6 - Compilation des sources ({MODEL_WRITER})...")
+    sources_section = compile_sources(client, content, enriched_news)
+    sources_section = clean_ai_patterns(sources_section)
+    source_count = sources_section.count("- [")
+    print(f"[Nova] => {source_count} sources compilees")
+    print()
+
+    # Étape 6 : SEO (titre, meta, tags)
+    print(f"[Nova] ETAPE 6/6 - Optimisation SEO ({MODEL_LIGHT})...")
     title = clean_ai_patterns(generate_title(client, theme, content))
-    summary = clean_ai_patterns(generate_summary(client, content))
+    summary = clean_ai_patterns(generate_meta_description(client, content))
     tags = extract_tags(client, theme, content)
+    print(f"[Nova] => Titre : {title}")
+    print(f"[Nova] => Meta  : {summary[:80]}...")
+    print(f"[Nova] => Tags  : {', '.join(tags)}")
+    print()
 
-    # Étape 6 : Créer le fichier
-    filepath = create_markdown_file(today, theme, title, summary, tags, content)
-    print(f"[Nova] Article cree : {filepath}")
-    print(f"[Nova] Titre : {title}")
+    # Créer le fichier
+    filepath = create_markdown_file(today, theme, title, summary, tags, content, sources_section)
+
+    # Résumé final
+    final_word_count = len(content.split())
+    print(f"[Nova] === ARTICLE GENERE ===")
+    print(f"[Nova] Fichier   : {filepath}")
+    print(f"[Nova] Titre     : {title}")
     print(f"[Nova] Categorie : {theme['name']}")
-    print(f"[Nova] Tags : {', '.join(tags)}")
-    print(f"[Nova] Pipeline : {MODEL_SEARCH} > {MODEL_WRITER} > {MODEL_CHECKER} > {MODEL_LIGHT}")
+    print(f"[Nova] Mots      : ~{final_word_count}")
+    print(f"[Nova] Sources   : {source_count}")
+    print(f"[Nova] Tags      : {', '.join(tags)}")
+    print(f"[Nova] Pipeline  : 3x {MODEL_SEARCH} + 2x {MODEL_WRITER} + {MODEL_LIGHT}")
 
-    # Exporter la date de l'article pour le workflow (GitHub Actions output)
+    # Exporter pour GitHub Actions
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
-        weekday_names_fr = {
-            0: "lundi", 1: "mardi", 2: "mercredi", 3: "jeudi", 4: "vendredi",
-        }
-        day_name = weekday_names_fr[today.weekday()]
+        day_name = WEEKDAY_NAMES[today.weekday()]
         with open(github_output, "a") as f:
             f.write(f"article_date={today.isoformat()}\n")
             f.write(f"article_day={day_name}\n")

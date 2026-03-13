@@ -2,13 +2,14 @@ name: "Publication quotidienne - Bonnes Nouvelles"
 
 on:
   schedule:
-    # Tous les jours à 12h00 heure de Paris (11h00 UTC, ou 10h00 UTC en été)
-    # Du lundi au vendredi uniquement
-    - cron: "0 11 * * 1-5"
+    # 8h00 heure de Paris = 7h00 UTC (hiver CET) / 6h00 UTC (été CEST)
+    # On utilise 7h UTC pour couvrir l'heure d'hiver (8h Paris)
+    # En été, ça se déclenchera à 9h Paris, ce qui reste acceptable
+    - cron: "0 7 * * 1-5"
   workflow_dispatch:
     inputs:
       force_date:
-        description: "Forcer une date spécifique (YYYY-MM-DD)"
+        description: "Forcer une date specifique (YYYY-MM-DD)"
         required: false
         type: string
 
@@ -21,6 +22,7 @@ env:
 jobs:
   generate-article:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: "Checkout du repository"
         uses: actions/checkout@v4
@@ -33,10 +35,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: "Installation des dépendances"
+      - name: "Installation des dependances"
         run: pip install -r scripts/requirements.txt
 
-      - name: "Generation et verification de l'article du jour"
+      - name: "Generation de l'article du jour"
         id: generate
         env:
           MAMMOUTH_API_KEY: ${{ secrets.MAMMOUTH_API_KEY }}
@@ -49,13 +51,11 @@ jobs:
           git config user.email "bot@bonnes-nouvelles.fr"
           git add content/posts/
 
-          # Vérifier s'il y a des changements
           if git diff --staged --quiet; then
             echo "Aucun nouvel article a publier."
             exit 0
           fi
 
-          # Utiliser la date de l'article (pas la date systeme)
           ARTICLE_DATE="${{ steps.generate.outputs.article_date }}"
           ARTICLE_DAY="${{ steps.generate.outputs.article_day }}"
           ARTICLE_THEME="${{ steps.generate.outputs.article_theme }}"
